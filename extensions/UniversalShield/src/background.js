@@ -1,5 +1,5 @@
 /**
- * LinkedIn ScamShield - Background Service Worker
+ * UniversalShield - Background Service Worker
  * 100% Open Source - MIT License
  */
 
@@ -23,12 +23,6 @@ chrome.runtime.onInstalled.addListener(() => {
       autoScan: true,
       notifyOnScam: true
     }
-  });
-
-  // Create alarm for daily stats reset (inside onInstalled)
-  chrome.alarms.create('resetDailyStats', {
-    when: getNextMidnight(),
-    periodInMinutes: 24 * 60
   });
 });
 
@@ -87,34 +81,4 @@ function handleScamReport(data) {
   });
   
   console.log('🛡️ Scam reported:', data.analysis.riskLevel, data.analysis.riskScore);
-}
-
-// Listen for alarm to reset daily stats
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'resetDailyStats') {
-    chrome.storage.local.get(['scamshield_stats'], (result) => {
-      const stats = result.scamshield_stats || {};
-      
-      // Accumulate to totals before reset
-      stats.totalScans = (stats.totalScans || 0) + (stats.scansToday || 0);
-      stats.totalScamsBlocked = (stats.totalScamsBlocked || 0) + (stats.scamsBlocked || 0);
-      
-      // Reset daily counters
-      stats.scansToday = 0;
-      stats.scamsBlocked = 0;
-      stats.suspiciousFound = 0;
-      
-      chrome.storage.local.set({ scamshield_stats: stats });
-    });
-  }
-});
-
-/**
- * Get timestamp for next midnight
- */
-function getNextMidnight() {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  return midnight.getTime();
 }
