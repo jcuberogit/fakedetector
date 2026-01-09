@@ -1,0 +1,322 @@
+[
+  {
+    "id": 1,
+    "platform": "linkedin",
+    "message": "Hi! I'm Sarah from TechCorp. Congrats on your profile! We have an urgent opening for Senior Developer. Download this assessment.exe to proceed with the interview. Need it done today!",
+    "metadata": {
+      "sender_account_age_days": 3,
+      "connection_degree": 3,
+      "claimed_role": "recruiter",
+      "has_attachment": true,
+      "file_type": "exe",
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "fake_job_malware",
+    "expected_risk_score": 95
+  },
+  {
+    "id": 2,
+    "platform": "linkedin",
+    "message": "URGENT: Your LinkedIn account will be suspended in 24 hours. Click here to verify: http://linkedin-verify-2024.com/verify",
+    "metadata": {
+      "sender_account_age_days": 1,
+      "connection_degree": 3,
+      "claimed_role": "linkedin_support",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "phishing_account_suspension",
+    "expected_risk_score": 98
+  },
+  {
+    "id": 3,
+    "platform": "linkedin",
+    "message": "Hello! I noticed your experience in software development. I'm working on a crypto investment opportunity that's returning 300% monthly. Interested? Limited spots available!",
+    "metadata": {
+      "sender_account_age_days": 7,
+      "connection_degree": 2,
+      "claimed_role": "investor",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "investment_scam",
+    "expected_risk_score": 92
+  },
+  {
+    "id": 4,
+    "platform": "gmail",
+    "message": "Your package delivery failed. Pay $2.99 shipping fee to reschedule: http://usps-redelivery.net/pay",
+    "metadata": {
+      "sender_account_age_days": 2,
+      "connection_degree": 3,
+      "claimed_role": "delivery_service",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "fake_delivery_phishing",
+    "expected_risk_score": 88
+  },
+  {
+    "id": 5,
+    "platform": "linkedin",
+    "message": "Hi, I'm recruiting for Google. We'd like to offer you a position. Please send your SSN and bank details for background check and direct deposit setup.",
+    "metadata": {
+      "sender_account_age_days": 5,
+      "connection_degree": 3,
+      "claimed_role": "recruiter",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "identity_theft",
+    "expected_risk_score": 97
+  },
+  {
+    "id": 6,
+    "platform": "linkedin",
+    "message": "Hey! Long time no see. Can you help me? I'm stuck abroad and lost my wallet. Can you send $500 via Western Union? I'll pay you back next week!",
+    "metadata": {
+      "sender_account_age_days": 1,
+      "connection_degree": 2,
+      "claimed_role": "friend",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "advance_fee_fraud",
+    "expected_risk_score": 85
+  },
+  {
+    "id": 7,
+    "platform": "outlook",
+    "message": "Congratulations! You've won $1,000,000 in the Microsoft Lottery. To claim your prize, please provide your bank account details and pay a $50 processing fee.",
+    "metadata": {
+      "sender_account_age_days": 1,
+      "connection_degree": 3,
+      "claimed_role": "lottery_official",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "lottery_scam",
+    "expected_risk_score": 99
+  },
+  {
+    "id": 8,
+    "platform": "linkedin",
+    "message": "I'm a prince from Nigeria. I have $25 million that I need to transfer out of the country. I'll give you 20% if you help me. Just need your bank details.",
+    "metadata": {
+      "sender_account_age_days": 2,
+      "connection_degree": 3,
+      "claimed_role": "royalty",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "nigerian_prince",
+    "expected_risk_score": 100
+  },
+  {
+    "id": 9,
+    "platform": "gmail",
+    "message": "Your Amazon account has suspicious activity. Verify your identity immediately by clicking here and entering your password: http://amazon-security-check.com",
+    "metadata": {
+      "sender_account_age_days": 1,
+      "connection_degree": 3,
+      "claimed_role": "amazon_support",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "credential_phishing",
+    "expected_risk_score": 94
+  },
+  {
+    "id": 10,
+    "platform": "linkedin",
+    "message": "Work from home opportunity! Earn $5000/week processing payments. No experience needed. Just provide your bank account for direct deposit of funds you'll process.",
+    "metadata": {
+      "sender_account_age_days": 4,
+      "connection_degree": 3,
+      "claimed_role": "recruiter",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "money_mule",
+    "expected_risk_score": 91
+  },
+  {
+    "id": 11,
+    "platform": "linkedin",
+    "message": "Hi! I saw your profile and think you'd be a great fit for our team. We're a startup looking for developers. What's your experience with React?",
+    "metadata": {
+      "sender_account_age_days": 180,
+      "connection_degree": 2,
+      "claimed_role": "recruiter",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": false,
+    "scam_type": null,
+    "expected_risk_score": 25
+  },
+  {
+    "id": 12,
+    "platform": "gmail",
+    "message": "Hey, it's been a while! Want to grab coffee next week? I'm free Tuesday or Thursday afternoon.",
+    "metadata": {
+      "sender_account_age_days": 730,
+      "connection_degree": 1,
+      "claimed_role": "friend",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 15
+    },
+    "is_scam": false,
+    "scam_type": null,
+    "expected_risk_score": 5
+  },
+  {
+    "id": 13,
+    "platform": "outlook",
+    "message": "Meeting reminder: Team standup tomorrow at 10am. Please review the sprint board before the meeting.",
+    "metadata": {
+      "sender_account_age_days": 365,
+      "connection_degree": 1,
+      "claimed_role": "coworker",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 50
+    },
+    "is_scam": false,
+    "scam_type": null,
+    "expected_risk_score": 2
+  },
+  {
+    "id": 14,
+    "platform": "linkedin",
+    "message": "Thanks for connecting! I'm always interested in meeting other professionals in the tech industry. Let me know if you'd like to chat sometime.",
+    "metadata": {
+      "sender_account_age_days": 450,
+      "connection_degree": 2,
+      "claimed_role": "professional",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": false,
+    "scam_type": null,
+    "expected_risk_score": 10
+  },
+  {
+    "id": 15,
+    "platform": "gmail",
+    "message": "Your order #12345 has shipped. Track your package here: https://www.amazon.com/track/12345",
+    "metadata": {
+      "sender_account_age_days": 1000,
+      "connection_degree": 3,
+      "claimed_role": "amazon",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 20
+    },
+    "is_scam": false,
+    "scam_type": null,
+    "expected_risk_score": 8
+  },
+  {
+    "id": 16,
+    "platform": "linkedin",
+    "message": "MAKE MONEY FAST!!! Click here NOW!!! Limited time offer!!! Don't miss out!!!",
+    "metadata": {
+      "sender_account_age_days": 1,
+      "connection_degree": 3,
+      "claimed_role": "marketer",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "spam_scam",
+    "expected_risk_score": 89
+  },
+  {
+    "id": 17,
+    "platform": "outlook",
+    "message": "Your Microsoft 365 subscription expires today. Renew now to avoid service interruption. Download this renewal_form.exe to continue.",
+    "metadata": {
+      "sender_account_age_days": 2,
+      "connection_degree": 3,
+      "claimed_role": "microsoft_support",
+      "has_attachment": true,
+      "file_type": "exe",
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "malware_phishing",
+    "expected_risk_score": 96
+  },
+  {
+    "id": 18,
+    "platform": "linkedin",
+    "message": "I'm looking for a software engineer for a 6-month contract. Rate is $80/hr. Are you available? Here's the job description attached.",
+    "metadata": {
+      "sender_account_age_days": 200,
+      "connection_degree": 2,
+      "claimed_role": "recruiter",
+      "has_attachment": true,
+      "file_type": "pdf",
+      "previous_interactions": 0
+    },
+    "is_scam": false,
+    "scam_type": null,
+    "expected_risk_score": 20
+  },
+  {
+    "id": 19,
+    "platform": "gmail",
+    "message": "Hi, I'm interested in your apartment listing. Is it still available? I can pay 6 months rent upfront. Please send me your bank details so I can wire the deposit.",
+    "metadata": {
+      "sender_account_age_days": 3,
+      "connection_degree": 3,
+      "claimed_role": "tenant",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 0
+    },
+    "is_scam": true,
+    "scam_type": "rental_scam",
+    "expected_risk_score": 87
+  },
+  {
+    "id": 20,
+    "platform": "linkedin",
+    "message": "I enjoyed your recent article on microservices architecture. Would love to discuss your thoughts on event-driven systems sometime.",
+    "metadata": {
+      "sender_account_age_days": 300,
+      "connection_degree": 2,
+      "claimed_role": "professional",
+      "has_attachment": false,
+      "file_type": null,
+      "previous_interactions": 1
+    },
+    "is_scam": false,
+    "scam_type": null,
+    "expected_risk_score": 12
+  }
+]
