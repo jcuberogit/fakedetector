@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniversalShield</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🛡️</span>
+        <span class="logo-text">UniversalShield</span>
+      </div>
+      <div class="status">
+        <span class="status-dot active"></span>
+        <span class="status-text">Active</span>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat-card red">
+        <div class="stat-value" id="scamsBlocked">0</div>
+        <div class="stat-label">Scams Blocked</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-value" id="suspiciousFound">0</div>
+        <div class="stat-label">Suspicious</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-value" id="scansToday">0</div>
+        <div class="stat-label">Scans Today</div>
+      </div>
+    </section>
+
+    <section class="protection-info">
+      <h3>What We Detect</h3>
+      <ul>
+        <li>📝 CV/Resume scams</li>
+        <li>🤖 AI bot messages</li>
+        <li>💰 Payment scams</li>
+        <li>🎣 Phishing attempts</li>
+      </ul>
+    </section>
+
+    <section class="settings">
+      <div class="setting-item">
+        <label for="enableScanning">Enable Protection</label>
+        <input type="checkbox" id="enableScanning" checked>
+      </div>
+      <div class="setting-item">
+        <label for="showBadges">Show Warning Badges</label>
+        <input type="checkbox" id="showBadges" checked>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>100% Open Source • MIT License</p>
+      <a href="https://github.com/jcuberogit/universalshield" target="_blank">GitHub</a>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

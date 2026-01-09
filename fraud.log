@@ -1,0 +1,39 @@
+INFO:__main__:🛡️ paradigm.fraud.agent v1.0.0 initialized
+INFO:__main__:🛡️ Starting paradigm.fraud.agent v1.0.0
+INFO:__main__:🔒 Security: ParadigmStore Universal Security enabled
+INFO:__main__:🌐 Port: 9001
+INFO:__main__:🎯 Endpoints:
+INFO:__main__:   🏥 Health Check: /health
+INFO:__main__:   📊 Statistics: /stats
+INFO:__main__:   🔍 Features: /features
+INFO:__main__:   🛡️ Capabilities: /capabilities
+INFO:__main__:   🔍 Transaction Analysis: /analyze
+INFO:__main__:   ⚠️ Risk Assessment: /risk-assessment
+INFO:__main__:   🛡️ Fraud Detection: /detect-fraud
+INFO:__main__:   🎨 Dashboard: /dashboard
+INFO:__main__:------------------------------------------------------------------------
+ * Serving Flask app 'agent_simple'
+ * Debug mode: off
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9001
+ * Running on http://192.168.0.57:9001
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:__main__:🛡️ paradigm.fraud.agent v1.0.0 initialized
+INFO:__main__:🛡️ Starting paradigm.fraud.agent v1.0.0
+INFO:__main__:🔒 Security: ParadigmStore Universal Security enabled
+INFO:__main__:🌐 Port: 9001
+INFO:__main__:🎯 Endpoints:
+INFO:__main__:   🏥 Health Check: /health
+INFO:__main__:   📊 Statistics: /stats
+INFO:__main__:   🔍 Features: /features
+INFO:__main__:   🛡️ Capabilities: /capabilities
+INFO:__main__:   🔍 Transaction Analysis: /analyze
+INFO:__main__:   ⚠️ Risk Assessment: /risk-assessment
+INFO:__main__:   🛡️ Fraud Detection: /detect-fraud
+INFO:__main__:   🎨 Dashboard: /dashboard
+INFO:__main__:------------------------------------------------------------------------
+ * Serving Flask app 'agent_simple'
+ * Debug mode: off
+Address already in use
+Port 9001 is in use by another program. Either identify and stop that program, or start the server with a different port.

@@ -1,0 +1,25 @@
+{
+  "agent_name": "paradigm.fraud.agent",
+  "version": "1.0.0",
+  "port": 9005,
+  "description": "Universal AI-Powered Fraud Detection Agent with real-time analysis, ML models, and learning system",
+  "database_path": "/Users/jcubero/Documents/MyGadget/ParadigmStore/shared/databases/paradigmstore.fraud.database",
+  "ml_models_path": "/Users/jcubero/Documents/MyGadget/ParadigmStore/agents/paradigm.fraud.agent/models",
+  "supported_analysis_types": ["transaction", "behavioral", "conversational", "audio"],
+  "performance_targets": {
+    "latency_ms": 600,
+    "accuracy_rate": 0.952,
+    "processing_capacity": 10000
+  },
+  "learning_agent": {
+    "enabled": true,
+    "adaptation_threshold": 10,
+    "target_accuracy": 0.952
+  },
+  "security": {
+    "require_client_id": false,
+    "rate_limit_per_minute": 100,
+    "validate_input": true,
+    "max_analysis_per_session": 1000
+  }
+}

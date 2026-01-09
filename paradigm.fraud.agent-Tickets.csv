@@ -1,0 +1,56 @@
+Ticket ID,Priority,Title,Category,Description,Acceptance Criteria,Technical Details,Dependencies,Estimated Hours,Status,TDD Requirements,Test Files,Step By Step Instructions,Best Practices,AI Clarification Points,Scientific Method Steps,SSH/Deployment Notes,Training References,Fraud Agent Reference,Ask Questions When
+FRAUD-001,CRITICAL,Create Comprehensive Test Infrastructure,Testing,"26,554 lines with only 1 test file (conftest.py). BLOCKER for production. Must create complete test infrastructure.","1. Create tests/ directory structure
+2. Create pytest.ini
+3. Create 60+ test files
+4. Achieve >80% coverage
+5. All tests pass","Current: 1 test file (conftest.py). Need: 60+ test files for 25+ services, ML models, GNN, rules engine.",pytest,40,PENDING,"RED: Create test infrastructure. GREEN: Validate tests work. REFACTOR: Optimize.","tests/unit/ (40 files), tests/integration/ (15 files), tests/ml/ (5 files)","1. Create tests/ structure 2. Create pytest.ini 3. Write critical tests first 4. Continue systematically 5. Monitor coverage 6. Document","Follow TDD, use fixtures, mock external services, test all error paths","Target 80% or 90% coverage? Which services are most critical?","RED: Create infrastructure. GREEN: Write tests. REFACTOR: Optimize. VALIDATE: >80% coverage.","No deployment - testing only.",None,None,None
+
+FRAUD-002,CRITICAL,Test ML Models Accuracy,ML/AI,"ML fraud models have no accuracy tests. Cannot validate fraud detection reliability.","1. Create ML test dataset (1000+ transactions)
+2. Test model accuracy (>99%)
+3. Test false positive rate (<1%)
+4. Test false negative rate (<0.1%)
+5. Document accuracy metrics","Current: ML models untested. Need: test dataset, accuracy validation, false positive/negative measurement. Target: >99% accuracy, <1% false positives.",ML test dataset,16,PENDING,"RED: Create test dataset. GREEN: Validate accuracy. REFACTOR: Improve models.","tests/ml/test_ml_models_accuracy.py","1. Create test dataset 2. Test ML models 3. Measure accuracy 4. Measure false positive/negative 5. Improve models if needed 6. Document","Use real-world fraud scenarios, test edge cases, validate against known fraud patterns","What accuracy is acceptable? False positive tolerance? Test with real data?","RED: Test accuracy. GREEN: Validate >99%. REFACTOR: Improve. VALIDATE: Production-ready accuracy.","No deployment - ML validation only.",None,None,REQUIRES_INTERVENTION: BUSINESS_RULE - Acceptable fraud detection accuracy?
+
+FRAUD-003,CRITICAL,Test GNN Fraud Ring Detection,ML/AI,"GNN (Graph Neural Network) for fraud ring detection untested. Cannot validate fraud ring identification.","1. Create fraud ring test cases
+2. Test GNN fraud ring detection
+3. Measure detection accuracy
+4. Test false positive fraud rings
+5. Document GNN performance","Current: GNN untested. Need: fraud ring test cases, detection accuracy measurement. Test: known fraud rings, legitimate connections.",GNN test data,12,PENDING,"RED: Create test cases. GREEN: Validate GNN. REFACTOR: Improve.","tests/ml/test_gnn_fraud_rings.py","1. Research fraud ring patterns 2. Create test cases 3. Test GNN detection 4. Measure accuracy 5. Improve if needed 6. Document","Use real fraud ring patterns, test legitimate connections (avoid false positives), validate graph analysis","How to create realistic fraud ring test data? Acceptable accuracy?","RED: Test GNN. GREEN: Validate detection. REFACTOR: Improve. VALIDATE: Accurate fraud ring detection.","No deployment - GNN validation only.",None,None,None
+
+FRAUD-004,CRITICAL,Test Rules Engine,Testing,"Dynamic rules engine untested. Rules may fail silently causing false negatives.","1. Test all fraud rules
+2. Test rule combinations
+3. Test rule priority
+4. Test dynamic rule updates
+5. All tests pass","Current: Rules engine untested. Need: test all static and dynamic rules, test combinations, validate priority.",None,8,PENDING,"RED: Write failing tests. GREEN: Fix bugs. REFACTOR: Improve.","tests/unit/test_rules_engine.py","1. Study rules engine 2. Write tests for all rules 3. Test combinations 4. Test priority 5. Fix bugs 6. Document","Test all rules individually, test combinations, validate priority, test dynamic updates","How many rules exist? Rule priority logic? Dynamic update frequency?","RED: Test rules. GREEN: Fix bugs. REFACTOR: Optimize. VALIDATE: All rules work correctly.","No deployment - testing only.",None,None,None
+
+FRAUD-005,HIGH,Remove Hardcoded Path (Line 20),Code Quality,"Line 20 has hardcoded path. Breaks in different environments.","1. Replace with relative path
+2. Test in different environments
+3. All tests pass","Current: Line 20 hardcoded. Fix: Use Path(__file__) or env var.",None,1,PENDING,"RED: Test in different env. GREEN: Fix path. REFACTOR: Use pathlib.","tests/unit/test_path_resolution.py","1. Replace line 20 2. Test in different environments 3. Document","Use pathlib.Path, use env vars, validate paths exist","How many hardcoded paths?","RED: Test fails. GREEN: Fix. REFACTOR: Use pathlib. VALIDATE: Works everywhere.","Deploy with env vars.",None,None,None
+
+FRAUD-006,HIGH,Add API Documentation (Swagger),Documentation,"No API documentation for 25+ endpoints. Need Swagger.","1. Install flask-swagger-ui
+2. Create OpenAPI spec
+3. Document all endpoints
+4. Deploy Swagger UI","Current: No API docs. Create OpenAPI 3.0 for 25+ fraud detection endpoints.",flask-swagger-ui,12,PENDING,"RED: Test API completeness. GREEN: Create docs. REFACTOR: Improve.","tests/unit/test_swagger_docs.py","1. Install flask-swagger-ui 2. Create openapi.yaml 3. Document endpoints 4. Deploy Swagger UI 5. Validate","Use OpenAPI 3.0, include examples, document errors","Swagger UI public or protected?","RED: Create spec. GREEN: Document. REFACTOR: Improve. VALIDATE: Docs complete.","Deploy Swagger UI.",None,None,None
+
+FRAUD-007,MEDIUM,Implement Load Testing,Performance,"Performance at scale unknown. Need load testing to validate <600ms response time at scale.","1. Create load test scenarios
+2. Test at 10x expected load
+3. Validate <600ms response time
+4. Identify bottlenecks
+5. Optimize","Current: <600ms claimed but not validated at scale. Load test: fraud detection API at 1000 req/sec.",Locust OR k6,10,PENDING,"RED: Set up load testing. GREEN: Identify bottlenecks. REFACTOR: Optimize.","tests/load/ (scenarios)","1. Define expected load 2. Create scenarios 3. Run load tests 4. Monitor performance 5. Optimize 6. Re-test 7. Document","Test realistic scenarios, monitor all resources, optimize bottlenecks","Expected fraud checks/second? Acceptable response time at scale?","RED: Load test. GREEN: Identify bottlenecks. REFACTOR: Optimize. VALIDATE: <600ms at scale.","Run in staging.",None,None,REQUIRES_INTERVENTION: BUSINESS_RULE - Expected load?
+
+FRAUD-008,MEDIUM,Add Fraud Detection Monitoring,Feature,"No monitoring for fraud detection operations. Need real-time monitoring and alerting.","1. Implement fraud metrics
+2. Track accuracy, false positives, response time
+3. Create monitoring dashboard
+4. Alert on anomalies","Current: No monitoring. Add: fraud detection count, accuracy, false positive rate, response time, alerts.",None,8,PENDING,"RED: Design metrics. GREEN: Implement monitoring. REFACTOR: Optimize.","tests/unit/test_monitoring.py","1. Design metrics 2. Write tests 3. Implement collection 4. Create dashboard 5. Add alerts 6. Deploy 7. Monitor","Track all operations, monitor accuracy, alert on anomalies, visualize metrics","What metrics are critical? Alert thresholds? Dashboard or external monitoring?","RED: Design. GREEN: Implement. REFACTOR: Optimize. VALIDATE: Monitoring works.","Deploy monitoring.",None,None,None
+
+FRAUD-009,LOW,Add SDK Documentation,Documentation,"SDKs exist (Python, C#, JavaScript) but need comprehensive documentation.","1. Document Python SDK
+2. Document C# SDK
+3. Document JavaScript SDK
+4. Add code examples
+5. Publish SDK docs","Current: SDKs exist but docs limited. Create: comprehensive SDK docs with examples for each language.",None,8,PENDING,"N/A - Documentation","N/A","1. Document Python SDK 2. Document C# SDK 3. Document JavaScript SDK 4. Add examples 5. Publish","Include installation, configuration, usage examples, best practices","Where to publish SDK docs?","N/A","Publish SDK docs online.",src/sdk/README.md,None,None
+
+FRAUD-010,LOW,Add CI/CD Pipeline,DevOps,"No CI/CD. Need automated testing on every commit for fraud detection code.","1. Create GitHub Actions workflow
+2. Run tests on commit
+3. Run linting
+4. Block merge if tests fail","Current: No CI/CD. Implement GitHub Actions for automated testing. Critical for fraud detection quality.",GitHub Actions,6,PENDING,"RED: Create CI. GREEN: Implement testing. REFACTOR: Optimize.","N/A - CI/CD config","1. Create .github/workflows/test.yml 2. Configure Python 3. Run tests 4. Run linting 5. Configure branch protection 6. Document","Use caching, run tests in parallel, block merges on failures","GitHub Actions or other CI?","RED: Create CI. GREEN: Implement. REFACTOR: Optimize. VALIDATE: Tests run on every commit.","Configure GitHub Actions.",None,None,None
+

@@ -1,0 +1,36 @@
+INFO:__main__:🛡️ paradigm.fraud.agent v1.0.0 initialized
+INFO:__main__:🛡️ Starting paradigm.fraud.agent v1.0.0
+INFO:__main__:🔒 Security: ParadigmStore Universal Security enabled
+INFO:__main__:🌐 Port: 9001
+INFO:__main__:🎯 Endpoints:
+INFO:__main__:   🏥 Health Check: /health
+INFO:__main__:   📊 Statistics: /stats
+INFO:__main__:   🔍 Features: /features
+INFO:__main__:   🛡️ Capabilities: /capabilities
+INFO:__main__:   🔍 Transaction Analysis: /analyze
+INFO:__main__:   ⚠️ Risk Assessment: /risk-assessment
+INFO:__main__:   🛡️ Fraud Detection: /detect-fraud
+INFO:__main__:   🎨 Dashboard: /dashboard
+INFO:__main__:------------------------------------------------------------------------
+ * Serving Flask app 'agent_simple'
+ * Debug mode: off
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9001
+ * Running on http://192.168.0.57:9001
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:01:33] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:01:35] "GET /stats HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:01:38] "GET /features HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:01:40] "POST /analyze HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:06:03] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:06:05] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:09:07] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:12:30] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:12:36] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:28:50] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 13:32:19] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 15:41:39] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 15:42:07] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 15:42:08] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [21/Oct/2025 16:11:41] "GET /health HTTP/1.1" 200 -

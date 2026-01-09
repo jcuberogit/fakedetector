@@ -1,0 +1,60 @@
+INFO:__main__:🛡️ paradigm.fraud.agent v1.0.0 initialized
+INFO:__main__:🛡️ Starting paradigm.fraud.agent v1.0.0
+INFO:__main__:🔒 Security: ParadigmStore Universal Security enabled
+INFO:__main__:🌐 Port: 9005
+INFO:__main__:🎯 Endpoints:
+INFO:__main__:   🏥 Health Check: /health
+INFO:__main__:   📊 Statistics: /stats
+INFO:__main__:   🔍 Features: /features
+INFO:__main__:   🛡️ Capabilities: /capabilities
+INFO:__main__:   🔍 Transaction Analysis: /analyze
+INFO:__main__:   ⚠️ Risk Assessment: /risk-assessment
+INFO:__main__:   🛡️ Fraud Detection: /detect-fraud
+INFO:__main__:   🎨 Dashboard: /dashboard
+INFO:__main__:------------------------------------------------------------------------
+ * Serving Flask app 'agent_simple'
+ * Debug mode: off
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9005
+ * Running on http://192.168.0.57:9005
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:09:30] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:10:29] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:10:37] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:10:37] "[33mGET /static/logo.png HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:26:28] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:28:33] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:30:45] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:43:51] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:45:17] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:45:51] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:46:27] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:47:12] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:48:25] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:49:42] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:52:50] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:53:57] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:54:58] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 17:59:02] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 18:00:02] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 18:07:51] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 18:12:32] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 18:22:28] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 18:25:51] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [22/Oct/2025 18:45:59] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 09:49:21] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 09:49:23] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 09:49:31] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 09:51:11] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 10:17:15] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 10:29:14] "GET /health HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:05] "[33mGET /api/fraud-check HTTP/1.1[0m" 404 -
+INFO:werkzeug:127.0.0.1 - - [23/Oct/2025 16:48:09] "GET /health HTTP/1.1" 200 -

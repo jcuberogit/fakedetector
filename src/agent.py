@@ -1,0 +1,3377 @@
+#!/usr/bin/env python3
+"""
+ParadigmStore Universal Fraud Detection Agent
+Real-time AI-powered fraud detection with ML models and learning system
+"""
+
+import os
+import sys
+import json
+import logging
+import asyncio
+import time
+import uuid
+from pathlib import Path
+from typing import Dict, Any, Optional, List
+from flask import Flask, request, jsonify, render_template
+from datetime import datetime
+from decimal import Decimal
+
+# Add ParadigmStore shared modules to path (relative to project root)
+_paradigm_store_root = Path(__file__).parent.parent.parent.parent
+if str(_paradigm_store_root) not in sys.path:
+    sys.path.insert(0, str(_paradigm_store_root))
+from modules.security.universal_security import secure_agent
+from modules.client_config_manager import get_client_config
+
+# Import fraud detection services
+from fraud_detection import (
+    InvestmentFraudDetectionService, MLService, GNNService, FraudTools, 
+    FraudConversationService, AdvancedFraudAlgorithms,
+    ConfigurationManager, ConfigurationLoader, get_config_manager, load_config, get_config,
+    SecurityMiddleware, AuthenticationService, AuthorizationService,
+    SecuritySettings, UserRole, Permission,
+    PerformanceMonitor, PerformanceOptimizer, performance_monitor, performance_monitor_instance, performance_optimizer,
+    PerformanceMetrics, SystemMetrics, PerformanceSummary, PerformanceConfiguration,
+    DatabaseService, database_service,
+    DataQualityService, data_quality_service,
+    MLTrainingPipeline, ml_training_pipeline,
+    FeatureEngineeringService, feature_engineering_service,
+    AdvancedRulesEngine, RuleManagementService, rules_engine,
+    MessagingService, get_messaging_service, MessagingConfiguration,
+    ServiceBusConfiguration, EventHubsConfiguration,
+    CustomerPortalService, customer_portal_service
+)
+from fraud_detection.investment_models import (
+    InvestmentTransactionRequest, InvestmentRiskAssessment, 
+    InvestmentValidationResult, TradingPattern
+)
+from fraud_detection.ml_models import (
+    ModelPredictionRequest, ModelPredictionResponse, ModelTrainingConfig
+)
+from fraud_detection.graph_models import (
+    FraudDetectionGraph, GraphNode, GraphEdge, GraphAnalysisResult,
+    FraudRing, GraphCommunity, GNNModelConfig
+)
+from fraud_detection.fraud_tools_models import (
+    FraudRiskScore, FraudAssessment, FraudRiskAssessment, Transaction,
+    TransferRequest, PaymentRequest, CardOperationRequest, FraudFeedback
+)
+from fraud_detection.conversation_models import (
+    FraudChatRequest, FraudChatResponse, UserContext, FraudAnalysisRequest
+)
+from fraud_detection.advanced_algorithms_models import (
+    ComprehensiveRiskAnalysis, FraudPattern, AdvancedAnalyticsData, TransactionData
+)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Load configuration
+try:
+    config = load_config()
+    logger.info("Configuration loaded successfully")
+except (ValueError, TypeError, AttributeError) as e:
+    logger.error(f"Failed to load configuration: {e}")
+    # Use default configuration
+    config = ConfigurationLoader.create_default_config()
+    logger.info("Using default configuration")
+
+app = Flask(__name__)
+
+class ParadigmFraudAgent:
+    """
+    Universal AI-Powered Fraud Detection Agent
+    
+    Responsibilities:
+    - Real-time transaction analysis (<600ms)
+    - Multi-modal fraud detection (transaction, audio, behavioral)
+    - Adaptive learning and improvement
+    - Client-agnostic fraud scoring
+    - Universal SDK support for all programming languages
+    """
+    
+    def __init__(self):
+        self.agent_name = "paradigm.fraud.agent"
+        self.version = "1.0.0"
+        self.port = 9001
+        
+        # Load configuration
+        self.config = config
+        
+        # Initialize fraud detection components
+        self.supported_clients = self._load_client_configs()
+        
+        # Initialize investment fraud detection service
+        self.investment_fraud_service = InvestmentFraudDetectionService()
+        
+        # Initialize ML service
+        self.ml_service = MLService()
+        
+        # Initialize GNN service
+        self.gnn_service = GNNService()
+        
+        # Initialize Fraud Tools service
+        self.fraud_tools = FraudTools()
+        
+        # Initialize AI Conversation service
+        self.conversation_service = FraudConversationService(
+            fraud_tools=self.fraud_tools,
+            gnn_service=self.gnn_service
+        )
+        
+        # Initialize Advanced Fraud Algorithms service
+        self.advanced_algorithms = AdvancedFraudAlgorithms(
+            gnn_service=self.gnn_service,
+            fraud_tools=self.fraud_tools
+        )
+        
+        # Initialize Security services
+        try:
+            if hasattr(self.config, 'security') and self.config.security:
+                security_config = self.config.security.model_dump()
+            else:
+                # Use default security settings
+                security_config = {
+                    "jwt_secret_key": "IfFnti/a17oa0mk7lfdFRr3c/p8MvxodfnXVj/3iqYE=",
+                    "jwt_issuer": "FraudDetectionAgent",
+                    "jwt_audience": "FraudDetectionAgent.Users",
+                    "jwt_expiry_minutes": 60,
+                    "refresh_token_expiry_days": 30,
+                    "api_key_expiry_days": 365,
+                    "max_login_attempts": 5,
+                    "lockout_duration_minutes": 15,
+                    "password_min_length": 8,
+                    "require_strong_password": True,
+                    "enable_two_factor": False,
+                    "enable_device_tracking": True,
+                    "enable_session_management": True,
+                    "enable_audit_logging": True,
+                    "cors_allowed_origins": ["*"],
+                    "cors_allowed_methods": ["GET", "POST", "PUT", "DELETE"],
+                    "cors_allowed_headers": ["*"],
+                    "rate_limit_requests_per_minute": 100,
+                    "rate_limit_burst_size": 200
+                }
+            self.security_settings = SecuritySettings(**security_config)
+            self.security_middleware = SecurityMiddleware(self.security_settings)
+            self.auth_service = AuthenticationService(self.security_settings)
+            self.authz_service = AuthorizationService()
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.error(f"Failed to initialize security services: {e}")
+            # Use minimal security settings
+            self.security_settings = SecuritySettings(
+                jwt_secret_key="IfFnti/a17oa0mk7lfdFRr3c/p8MvxodfnXVj/3iqYE="
+            )
+            self.security_middleware = SecurityMiddleware(self.security_settings)
+            self.auth_service = AuthenticationService(self.security_settings)
+            self.authz_service = AuthorizationService()
+        
+        # Initialize Performance monitoring
+        self.performance_monitor = performance_monitor_instance
+        self.performance_optimizer = performance_optimizer
+        
+        # Start performance monitoring
+        self.performance_monitor.start_monitoring()
+        
+        # Initialize Database service
+        self.database_service = database_service
+        
+        # Initialize Data Quality service
+        self.data_quality_service = data_quality_service
+        
+        # Initialize ML Training Pipeline
+        self.ml_training_pipeline = ml_training_pipeline
+        
+        # Initialize Feature Engineering Service
+        self.feature_engineering_service = feature_engineering_service
+        
+        # Initialize Rules Engine
+        self.rules_engine = rules_engine
+        
+        # Initialize Messaging Service
+        messaging_config = MessagingConfiguration(
+            service_bus=ServiceBusConfiguration(
+                connection_string="Endpoint=sb://mock.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mock_key",
+                topic_name="fraud-alerts",
+                subscription_name="fraud-processor"
+            ),
+            event_hubs=EventHubsConfiguration(
+                connection_string="Endpoint=sb://mock-eventhub.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mock_key",
+                event_hub_name="fraud-transactions"
+            )
+        )
+        self.messaging_service = MessagingService(messaging_config)
+        
+        # Initialize Customer Portal Service
+        self.customer_portal_service = customer_portal_service
+        
+        # Performance tracking
+        self.analysis_count = 0
+        self.total_processing_time = 0.0
+        
+        # API Key management for universal SDK
+        self.registered_keys = {}
+        
+        logger.info(f"🤖 {self.agent_name} v{self.version} initialized")
+        logger.info(f"🎯 Performance targets: {getattr(self.config, 'performance_targets', 'Not configured')}")
+        logger.info(f"🌍 Universal SDK enabled for all programming languages")
+        logger.info(f"📈 Investment fraud detection service initialized")
+        logger.info(f"🤖 ML service with XGBoost and Neural Networks initialized")
+        logger.info(f"🕸️ GNN service with graph analysis and fraud ring detection initialized")
+        logger.info(f"🔧 Fraud Tools service with risk assessment algorithms initialized")
+        logger.info(f"💬 AI Conversation service with OpenAI integration initialized")
+        logger.info(f"📊 Advanced Fraud Algorithms service with multi-dimensional analysis initialized")
+    
+    def _load_agent_config(self) -> Dict:
+        """Load agent configuration"""
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'agent_config.json')
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logger.warning("Agent config not found, using defaults")
+            return {
+                "agent_name": "paradigm.fraud.agent",
+                "port": 9001,
+                "performance_targets": {
+                    "latency_ms": 600,
+                    "accuracy_rate": 0.952
+                }
+            }
+    
+    def _load_client_configs(self) -> Dict:
+        """Load client configurations using centralized config manager"""
+        configs = {}
+        
+        # Load Hello Store configuration from centralized manager
+        hello_store_config = get_client_config("hello-store-001")
+        if hello_store_config:
+            configs['hello-store'] = {
+                'name': hello_store_config.get_company_name(),
+                'brand_name': hello_store_config.get_brand_name(),
+                'domain': hello_store_config.get_domain(),
+                'currency': hello_store_config.get_currency(),
+                'language': hello_store_config.get_language(),
+                'country': hello_store_config.get_country(),
+                'company_id': hello_store_config.get_company_id()
+            }
+            logger.info(f"✅ Loaded centralized config for {hello_store_config.get_company_name()}")
+        else:
+            logger.warning("⚠️ Could not load Hello Store config from centralized manager")
+        
+        # Universal client for direct API access
+        configs['universal'] = {
+            'name': 'Universal Client',
+            'brand_name': 'Universal Client',
+            'domain': 'api.paradigmstore.com',
+            'currency': 'USD',
+            'language': 'en',
+            'country': 'US',
+            'company_id': 'UNIVERSAL'
+        }
+        
+        return configs
+    
+    def register_api_key(self, api_key: str, client_info: Dict[str, Any]) -> bool:
+        """Register a new API key for universal SDK access"""
+        self.registered_keys[api_key] = {
+            'client_name': client_info.get('name', 'Unknown'),
+            'platform': client_info.get('platform', 'Unknown'),
+            'language': client_info.get('language', 'Unknown'),
+            'created_at': datetime.now().isoformat()
+        }
+        logger.info(f"🔑 API key registered for {client_info.get('name', 'Unknown')} on {client_info.get('platform', 'Unknown')}")
+        return True
+    
+    def validate_api_key(self, api_key: str) -> bool:
+        """Validate API key for SDK access"""
+        return api_key in self.registered_keys
+    
+    def normalize_transaction(self, transaction_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize transaction data from different platforms and languages"""
+        normalized = {}
+        
+        # Amount normalization (handle different field names)
+        for amount_field in ['amount', 'value', 'total', 'precio', 'monto']:
+            if amount_field in transaction_data:
+                normalized['amount'] = float(transaction_data[amount_field])
+                break
+        
+        # User identification (handle different field names)
+        for user_field in ['user_id', 'customer_id', 'email', 'usuario_id', 'cliente_id']:
+            if user_field in transaction_data:
+                normalized['user_id'] = str(transaction_data[user_field])
+                break
+        
+        # Merchant information (handle different field names)
+        for merchant_field in ['merchant', 'store', 'vendor', 'comercio', 'tienda']:
+            if merchant_field in transaction_data:
+                normalized['merchant'] = str(transaction_data[merchant_field])
+                break
+        
+        # Copy timestamp
+        if 'timestamp' not in transaction_data:
+            normalized['timestamp'] = datetime.now().isoformat()
+        
+        # Copy all other fields
+        for key, value in transaction_data.items():
+            if key not in normalized:
+                normalized[key] = value
+        
+        return normalized
+    
+    async def analyze_transaction(self, transaction_data: Dict[str, Any], 
+                                client_id: str = "universal", 
+                                api_key: str = None) -> Dict[str, Any]:
+        """
+        Universal transaction analysis for any platform/language
+        
+        Args:
+            transaction_data: Transaction details (normalized from any platform)
+            client_id: Client identifier for multi-tenant support
+            api_key: API key for SDK access
+            
+        Returns:
+            Fraud analysis result with risk score and recommendation
+        """
+        start_time = time.time()
+        
+        try:
+            # Normalize transaction data from any platform
+            normalized_transaction = self.normalize_transaction(transaction_data)
+            
+            # Add client context
+            normalized_transaction['client_id'] = client_id
+            
+            # Simple fraud analysis (will be replaced with full ML system)
+            risk_score = await self._simple_fraud_analysis(normalized_transaction)
+            
+            # Determine recommendation based on risk score
+            if risk_score >= 0.8:
+                recommendation = "DENY"
+            elif risk_score >= 0.5:
+                recommendation = "REVIEW"
+            else:
+                recommendation = "APPROVE"
+            
+            # Calculate processing time
+            processing_time = (time.time() - start_time) * 1000
+            
+            # Update performance metrics
+            self.analysis_count += 1
+            self.total_processing_time += processing_time
+            
+            # Build result
+            result = {
+                'success': True,
+                'risk_score': risk_score,
+                'recommendation': recommendation,
+                'reasoning': f"Fraud analysis based on amount: ${normalized_transaction.get('amount', 0)}",
+                'agent': self.agent_name,
+                'version': self.version,
+                'client_id': client_id,
+                'analysis_timestamp': datetime.now().isoformat(),
+                'processing_time_ms': processing_time,
+                'analysis_id': f"fraud_{self.analysis_count}_{int(time.time())}",
+                'sdk_version': '1.0.0'
+            }
+            
+            # Add API key info if provided
+            if api_key and api_key in self.registered_keys:
+                result['client_platform'] = self.registered_keys[api_key]['platform']
+                result['api_key'] = api_key[:8] + '...'
+            
+            logger.info(f"✅ Analysis completed: {recommendation} (Risk: {risk_score:.3f}, Time: {processing_time:.1f}ms)")
+            
+            return result
+            
+        except (ValueError) as e:
+            logger.error(f"❌ Fraud analysis error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'risk_score': 0.5,  # Neutral score on error
+                'recommendation': 'REVIEW',
+                'agent': self.agent_name,
+                'processing_time_ms': (time.time() - start_time) * 1000
+            }
+    
+    async def _simple_fraud_analysis(self, transaction: Dict[str, Any]) -> float:
+        """Simple fraud analysis (placeholder for full ML system)"""
+        risk_score = 0.0
+        
+        amount = transaction.get('amount', 0)
+        merchant = str(transaction.get('merchant', '')).lower()
+        
+        # Simple risk rules
+        if amount > 5000:
+            risk_score += 0.3
+        if amount > 10000:
+            risk_score += 0.2
+        if 'unknown' in merchant or not merchant:
+            risk_score += 0.4
+        
+        # Add some randomness for demo
+        import random
+        risk_score += random.uniform(0, 0.1)
+        
+        return min(risk_score, 1.0)
+    
+    def get_health(self) -> Dict:
+        """Health check endpoint"""
+        avg_processing_time = (self.total_processing_time / self.analysis_count) if self.analysis_count > 0 else 0
+        
+        return {
+            'agent': self.agent_name,
+            'version': self.version,
+            'status': 'healthy',
+            'port': self.port,
+            'performance_metrics': {
+                'total_analyses': self.analysis_count,
+                'avg_processing_time_ms': round(avg_processing_time, 2),
+                'target_latency_ms': self.config['performance_targets']['latency_ms'],
+                'target_accuracy': self.config['performance_targets']['accuracy_rate']
+            },
+            'registered_api_keys': len(self.registered_keys),
+            'supported_analysis_types': self.config.get('supported_analysis_types', []),
+            'universal_sdk': {
+                'enabled': True,
+                'supported_languages': ['C#', 'JavaScript', 'Python', 'Java', 'PHP', 'Ruby', 'Go'],
+                'supported_platforms': ['Web', 'Mobile', 'Desktop', 'POS', 'E-commerce']
+            },
+            'database': 'connected',
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    def get_statistics(self) -> Dict:
+        """Get comprehensive fraud detection statistics"""
+        return {
+            'agent_info': {
+                'name': self.agent_name,
+                'version': self.version,
+                'uptime_analyses': self.analysis_count
+            },
+            'performance': {
+                'avg_processing_time_ms': (self.total_processing_time / self.analysis_count) if self.analysis_count > 0 else 0,
+                'target_latency_ms': self.config['performance_targets']['latency_ms'],
+                'latency_compliance': True
+            },
+            'universal_sdk': {
+                'registered_clients': len(self.registered_keys),
+                'supported_languages': ['C#', 'JavaScript', 'Python', 'Java', 'PHP', 'Ruby', 'Go']
+            },
+            'supported_features': self.config.get('supported_analysis_types', [])
+        }
+
+# Initialize the agent
+fraud_agent = ParadigmFraudAgent()
+
+# Apply ParadigmStore Universal Security
+secure_agent(app, fraud_agent.agent_name, {
+    'rate_limits': {
+        'default': "10000 per day, 1000 per hour, 100 per minute",
+        'analysis': "5000 per hour, 500 per minute"
+    }
+})
+
+# Universal SDK API Endpoints
+@app.route('/api/sdk/analyze', methods=['POST'])
+@app.paradigm_validate_input
+def universal_analyze():
+    """Universal fraud analysis endpoint for all SDKs"""
+    try:
+        data = request.get_json()
+        
+        # Extract API key
+        api_key = request.headers.get('X-API-Key') or data.get('api_key')
+        if not api_key:
+            return jsonify({'error': 'API key required'}), 401
+        
+        # Validate API key
+        if not fraud_agent.validate_api_key(api_key):
+            return jsonify({'error': 'Invalid API key'}), 401
+        
+        transaction_data = data.get('transaction', {})
+        client_id = data.get('client_id', 'universal')
+        
+        if not transaction_data:
+            return jsonify({'error': 'Transaction data required'}), 400
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.analyze_transaction(transaction_data, client_id, api_key))
+        return jsonify(result)
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Universal analysis error: {e}")
+        return jsonify({'error': 'Analysis failed'}), 500
+
+@app.route('/api/sdk/register', methods=['POST'])
+@app.paradigm_validate_input
+def register_api_key():
+    """Register a new API key for SDK access"""
+    try:
+        data = request.get_json()
+        
+        api_key = data.get('api_key')
+        client_info = data.get('client_info', {})
+        
+        if not api_key:
+            return jsonify({'error': 'API key required'}), 400
+        
+        success = fraud_agent.register_api_key(api_key, client_info)
+        
+        return jsonify({
+            'success': success,
+            'message': 'API key registered successfully',
+            'supported_languages': ['C#', 'JavaScript', 'Python', 'Java', 'PHP', 'Ruby', 'Go'],
+            'endpoints': {
+                'analyze': '/api/sdk/analyze',
+                'health': '/health',
+                'documentation': '/api/sdk/docs'
+            }
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ API key registration error: {e}")
+        return jsonify({'error': 'Registration failed'}), 500
+
+# Legacy API Endpoints (for compatibility)
+@app.route('/api/analyze', methods=['POST'])
+@app.paradigm_validate_input
+def analyze_transaction():
+    """Legacy fraud analysis endpoint"""
+    try:
+        data = request.get_json()
+        
+        transaction_data = data.get('transaction', {})
+        client_id = data.get('client_id', 'hello-store')
+        
+        if not transaction_data:
+            return jsonify({'error': 'Transaction data required'}), 400
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.analyze_transaction(transaction_data, client_id))
+        return jsonify(result)
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Analysis endpoint error: {e}")
+        return jsonify({'error': 'Analysis failed'}), 500
+
+@app.route('/api/batch-analyze', methods=['POST'])
+@app.paradigm_validate_input
+def batch_analyze():
+    """Batch fraud analysis endpoint"""
+    try:
+        data = request.get_json()
+        
+        transactions = data.get('transactions', [])
+        client_id = data.get('client_id', 'universal')
+        api_key = request.headers.get('X-API-Key') or data.get('api_key')
+        
+        if not transactions:
+            return jsonify({'error': 'Transactions array required'}), 400
+        
+        # Process batch transactions with async
+        async def process_batch():
+            results = []
+            for transaction in transactions:
+                result = await fraud_agent.analyze_transaction(transaction, client_id, api_key)
+                results.append(result)
+            return results
+        
+        results = asyncio.run(process_batch())
+        
+        return jsonify({
+            'success': True,
+            'total_analyzed': len(results),
+            'results': results,
+            'client_id': client_id
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Batch analysis error: {e}")
+        return jsonify({'error': 'Batch analysis failed'}), 500
+
+@app.route('/api/investment/assess-risk', methods=['POST'])
+@app.paradigm_validate_input
+def assess_investment_risk():
+    """Investment risk assessment endpoint"""
+    try:
+        data = request.get_json()
+        
+        user_id = data.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.investment_fraud_service.assess_investment_risk_async(user_id))
+        
+        return jsonify({
+            'success': True,
+            'risk_assessment': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Investment risk assessment error: {e}")
+        return jsonify({'error': 'Risk assessment failed'}), 500
+
+@app.route('/api/investment/validate-transaction', methods=['POST'])
+@app.paradigm_validate_input
+def validate_investment_transaction():
+    """Investment transaction validation endpoint"""
+    try:
+        data = request.get_json()
+        
+        user_id = data.get('user_id')
+        transaction_data = data.get('transaction')
+        
+        if not user_id or not transaction_data:
+            return jsonify({'error': 'user_id and transaction required'}), 400
+        
+        # Create transaction request object
+        transaction_request = InvestmentTransactionRequest(**transaction_data)
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.investment_fraud_service.validate_transaction_async(user_id, transaction_request))
+        
+        return jsonify({
+            'success': True,
+            'validation_result': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Investment transaction validation error: {e}")
+        return jsonify({'error': 'Transaction validation failed'}), 500
+
+@app.route('/api/investment/detect-patterns', methods=['POST'])
+@app.paradigm_validate_input
+def detect_fraud_patterns():
+    """Advanced fraud pattern detection endpoint"""
+    try:
+        data = request.get_json()
+        
+        user_id = data.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        
+        # Run async function in main thread
+        patterns = asyncio.run(fraud_agent.investment_fraud_service.detect_advanced_fraud_patterns_async(user_id))
+        
+        return jsonify({
+            'success': True,
+            'patterns': [pattern.dict() for pattern in patterns],
+            'pattern_count': len(patterns),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Fraud pattern detection error: {e}")
+        return jsonify({'error': 'Pattern detection failed'}), 500
+
+@app.route('/api/ml/predict', methods=['POST'])
+@app.paradigm_validate_input
+def ml_predict():
+    """ML model prediction endpoint"""
+    try:
+        data = request.get_json()
+        
+        model_id = data.get('model_id')
+        features = data.get('features', {})
+        
+        if not model_id or not features:
+            return jsonify({'error': 'model_id and features required'}), 400
+        
+        # Create prediction request
+        prediction_request = ModelPredictionRequest(
+            model_id=model_id,
+            features=features,
+            transaction_id=data.get('transaction_id', ''),
+            user_id=data.get('user_id', ''),
+            return_probabilities=data.get('return_probabilities', True),
+            return_feature_importance=data.get('return_feature_importance', False),
+            metadata=data.get('metadata', {})
+        )
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.ml_service.predict_async(prediction_request))
+        
+        return jsonify({
+            'success': True,
+            'prediction': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ ML prediction error: {e}")
+        return jsonify({'error': 'ML prediction failed'}), 500
+
+@app.route('/api/ml/ensemble-predict', methods=['POST'])
+@app.paradigm_validate_input
+def ml_ensemble_predict():
+    """ML ensemble prediction endpoint"""
+    try:
+        data = request.get_json()
+        
+        model_id = data.get('model_id')
+        features = data.get('features', {})
+        
+        if not model_id or not features:
+            return jsonify({'error': 'model_id and features required'}), 400
+        
+        # Create prediction request
+        prediction_request = ModelPredictionRequest(
+            model_id=model_id,
+            features=features,
+            transaction_id=data.get('transaction_id', ''),
+            user_id=data.get('user_id', ''),
+            return_probabilities=True,
+            return_feature_importance=False,
+            metadata=data.get('metadata', {})
+        )
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.ml_service.predict_with_ensemble_async(prediction_request))
+        
+        return jsonify({
+            'success': True,
+            'ensemble_prediction': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ ML ensemble prediction error: {e}")
+        return jsonify({'error': 'ML ensemble prediction failed'}), 500
+
+@app.route('/api/ml/train', methods=['POST'])
+@app.paradigm_validate_input
+def ml_train():
+    """ML model training endpoint"""
+    try:
+        data = request.get_json()
+        
+        model_id = data.get('model_id')
+        dataset_path = data.get('dataset_path', './data/training_data.csv')
+        
+        if not model_id:
+            return jsonify({'error': 'model_id required'}), 400
+        
+        # Create training config
+        training_config = ModelTrainingConfig(
+            model_id=model_id,
+            dataset_path=dataset_path,
+            train_split=Decimal(str(data.get('train_split', 0.7))),
+            validation_split=Decimal(str(data.get('validation_split', 0.15))),
+            test_split=Decimal(str(data.get('test_split', 0.15))),
+            hyperparameters=data.get('hyperparameters', {}),
+            max_epochs=data.get('max_epochs', 100),
+            learning_rate=Decimal(str(data.get('learning_rate', 0.01))),
+            batch_size=data.get('batch_size', 32),
+            enable_early_stopping=data.get('enable_early_stopping', True),
+            patience=data.get('patience', 10)
+        )
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.ml_service.train_model_async(training_config))
+        
+        return jsonify({
+            'success': True,
+            'training_result': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ ML training error: {e}")
+        return jsonify({'error': 'ML training failed'}), 500
+
+@app.route('/api/ml/evaluate/<model_id>', methods=['POST'])
+@app.paradigm_validate_input
+def ml_evaluate(model_id):
+    """ML model evaluation endpoint"""
+    try:
+        # Run async function in main thread
+        metrics = asyncio.run(fraud_agent.ml_service.evaluate_model_async(model_id))
+        
+        return jsonify({
+            'success': True,
+            'model_id': model_id,
+            'metrics': metrics.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ ML evaluation error: {e}")
+        return jsonify({'error': 'ML evaluation failed'}), 500
+
+@app.route('/api/ml/detect-drift/<model_id>', methods=['POST'])
+@app.paradigm_validate_input
+def ml_detect_drift(model_id):
+    """ML model drift detection endpoint"""
+    try:
+        # Run async function in main thread
+        drift_result = asyncio.run(fraud_agent.ml_service.detect_drift_async(model_id))
+        
+        return jsonify({
+            'success': True,
+            'model_id': model_id,
+            'drift_result': drift_result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ ML drift detection error: {e}")
+        return jsonify({'error': 'ML drift detection failed'}), 500
+
+# GNN Service Endpoints
+
+@app.route('/api/gnn/create-graph', methods=['POST'])
+@app.paradigm_validate_input
+def create_graph():
+    """Create a new fraud detection graph"""
+    try:
+        data = request.get_json()
+        name = data.get('name', 'New Fraud Detection Graph')
+        description = data.get('description', 'Graph for fraud detection analysis')
+        
+        # Run async function in main thread
+        graph = asyncio.run(fraud_agent.gnn_service.create_graph_async(name, description))
+        
+        return jsonify({
+            'success': True,
+            'graph': graph.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Graph creation error: {e}")
+        return jsonify({'error': 'Graph creation failed'}), 500
+
+@app.route('/api/gnn/graphs', methods=['GET'])
+def get_all_graphs():
+    """Get all fraud detection graphs"""
+    try:
+        # Run async function in main thread
+        graphs = asyncio.run(fraud_agent.gnn_service.get_all_graphs_async())
+        
+        return jsonify({
+            'success': True,
+            'graphs': [graph.dict() for graph in graphs],
+            'count': len(graphs),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get graphs error: {e}")
+        return jsonify({'error': 'Failed to get graphs'}), 500
+
+@app.route('/api/gnn/graphs/<graph_id>', methods=['GET'])
+def get_graph(graph_id):
+    """Get specific fraud detection graph"""
+    try:
+        # Run async function in main thread
+        graph = asyncio.run(fraud_agent.gnn_service.get_graph_async(graph_id))
+        
+        return jsonify({
+            'success': True,
+            'graph': graph.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get graph error: {e}")
+        return jsonify({'error': 'Failed to get graph'}), 500
+
+@app.route('/api/gnn/graphs/<graph_id>/nodes', methods=['POST'])
+@app.paradigm_validate_input
+def add_node(graph_id):
+    """Add node to fraud detection graph"""
+    try:
+        data = request.get_json()
+        node_data = GraphNode(**data)
+        
+        # Run async function in main thread
+        node = asyncio.run(fraud_agent.gnn_service.add_node_async(graph_id, node_data))
+        
+        return jsonify({
+            'success': True,
+            'node': node.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Add node error: {e}")
+        return jsonify({'error': 'Failed to add node'}), 500
+
+@app.route('/api/gnn/graphs/<graph_id>/edges', methods=['POST'])
+@app.paradigm_validate_input
+def add_edge(graph_id):
+    """Add edge to fraud detection graph"""
+    try:
+        data = request.get_json()
+        edge_data = GraphEdge(**data)
+        
+        # Run async function in main thread
+        edge = asyncio.run(fraud_agent.gnn_service.add_edge_async(graph_id, edge_data))
+        
+        return jsonify({
+            'success': True,
+            'edge': edge.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Add edge error: {e}")
+        return jsonify({'error': 'Failed to add edge'}), 500
+
+@app.route('/api/gnn/graphs/<graph_id>/analyze', methods=['POST'])
+def analyze_graph(graph_id):
+    """Perform comprehensive graph analysis"""
+    try:
+        # Run async function in main thread
+        analysis_result = asyncio.run(fraud_agent.gnn_service.analyze_graph_async(graph_id))
+        
+        return jsonify({
+            'success': True,
+            'analysis': analysis_result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Graph analysis error: {e}")
+        return jsonify({'error': 'Graph analysis failed'}), 500
+
+@app.route('/api/gnn/graphs/<graph_id>/fraud-rings', methods=['POST'])
+def detect_fraud_rings(graph_id):
+    """Detect fraud rings in the graph"""
+    try:
+        # Run async function in main thread
+        fraud_rings = asyncio.run(fraud_agent.gnn_service.detect_fraud_rings_async(graph_id))
+        
+        return jsonify({
+            'success': True,
+            'fraud_rings': [ring.dict() for ring in fraud_rings],
+            'count': len(fraud_rings),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Fraud ring detection error: {e}")
+        return jsonify({'error': 'Fraud ring detection failed'}), 500
+
+@app.route('/api/gnn/graphs/<graph_id>/communities', methods=['POST'])
+def detect_communities(graph_id):
+    """Detect communities in the graph"""
+    try:
+        # Run async function in main thread
+        communities = asyncio.run(fraud_agent.gnn_service.detect_communities_async(graph_id))
+        
+        return jsonify({
+            'success': True,
+            'communities': [community.dict() for community in communities],
+            'count': len(communities),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Community detection error: {e}")
+        return jsonify({'error': 'Community detection failed'}), 500
+
+# Fraud Tools Service Endpoints
+
+@app.route('/api/fraud-tools/calculate-risk-score', methods=['POST'])
+@app.paradigm_validate_input
+def calculate_transaction_risk_score():
+    """Calculate comprehensive risk score for a transaction"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        amount = Decimal(str(data.get('amount', 100)))
+        merchant_name = data.get('merchant_name', 'Unknown Merchant')
+        location = data.get('location', 'Unknown Location')
+        
+        # Run async function in main thread
+        risk_score = asyncio.run(fraud_agent.fraud_tools.calculate_transaction_risk_score(
+            transaction_id, amount, merchant_name, location
+        ))
+        
+        return jsonify({
+            'success': True,
+            'risk_score': risk_score.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Risk score calculation error: {e}")
+        return jsonify({'error': 'Risk score calculation failed'}), 500
+
+@app.route('/api/fraud-tools/analyze-pattern', methods=['POST'])
+@app.paradigm_validate_input
+def analyze_transaction_pattern():
+    """Analyze transaction patterns for a specific account and transaction"""
+    try:
+        data = request.get_json()
+        account_id = data.get('account_id', f"account_{uuid.uuid4().hex[:8]}")
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        assessment = asyncio.run(fraud_agent.fraud_tools.analyze_transaction_pattern(
+            account_id, transaction_id
+        ))
+        
+        return jsonify({
+            'success': True,
+            'assessment': assessment.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Pattern analysis error: {e}")
+        return jsonify({'error': 'Pattern analysis failed'}), 500
+
+@app.route('/api/fraud-tools/detect-velocity-anomalies', methods=['POST'])
+@app.paradigm_validate_input
+def detect_velocity_anomalies():
+    """Detect velocity-based fraud anomalies"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        amount = Decimal(str(data.get('amount', 100)))
+        transaction_time = datetime.fromisoformat(data.get('transaction_time', datetime.utcnow().isoformat()))
+        
+        # Run async function in main thread
+        anomalies = asyncio.run(fraud_agent.fraud_tools.detect_velocity_anomalies(
+            user_id, amount, transaction_time
+        ))
+        
+        return jsonify({
+            'success': True,
+            'anomalies': [anomaly.dict() for anomaly in anomalies],
+            'count': len(anomalies),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Velocity anomaly detection error: {e}")
+        return jsonify({'error': 'Velocity anomaly detection failed'}), 500
+
+@app.route('/api/fraud-tools/analyze-history-risk', methods=['POST'])
+@app.paradigm_validate_input
+def analyze_transaction_history_risk():
+    """Analyze transaction history risk"""
+    try:
+        data = request.get_json()
+        account_id = data.get('account_id', f"account_{uuid.uuid4().hex[:8]}")
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        assessment = asyncio.run(fraud_agent.fraud_tools.analyze_transaction_history_risk(
+            account_id, user_id
+        ))
+        
+        return jsonify({
+            'success': True,
+            'assessment': assessment.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ History risk analysis error: {e}")
+        return jsonify({'error': 'History risk analysis failed'}), 500
+
+@app.route('/api/fraud-tools/analyze-card-operation-risk', methods=['POST'])
+@app.paradigm_validate_input
+def analyze_card_operation_risk():
+    """Analyze card operation risk"""
+    try:
+        data = request.get_json()
+        card_id = data.get('card_id', f"card_{uuid.uuid4().hex[:8]}")
+        action = data.get('action', 'lock')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        assessment = asyncio.run(fraud_agent.fraud_tools.analyze_card_operation_risk(
+            card_id, action, user_id
+        ))
+        
+        return jsonify({
+            'success': True,
+            'assessment': assessment.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Card operation risk analysis error: {e}")
+        return jsonify({'error': 'Card operation risk analysis failed'}), 500
+
+@app.route('/api/fraud-tools/detect-fraud-ring', methods=['POST'])
+@app.paradigm_validate_input
+def detect_fraud_ring():
+    """Detect potential fraud rings using graph analysis"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.fraud_tools.detect_fraud_ring(transaction_id))
+        
+        return jsonify({
+            'success': True,
+            'result': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Fraud ring detection error: {e}")
+        return jsonify({'error': 'Fraud ring detection failed'}), 500
+
+@app.route('/api/fraud-tools/record-feedback', methods=['POST'])
+@app.paradigm_validate_input
+def record_feedback():
+    """Record fraud detection feedback"""
+    try:
+        data = request.get_json()
+        feedback_data = FraudFeedback(**data)
+        
+        # Run async function in main thread
+        success = asyncio.run(fraud_agent.fraud_tools.record_feedback(feedback_data))
+        
+        return jsonify({
+            'success': success,
+            'message': 'Feedback recorded successfully' if success else 'Failed to record feedback',
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Feedback recording error: {e}")
+        return jsonify({'error': 'Feedback recording failed'}), 500
+
+@app.route('/api/fraud-tools/compute-counterfactual', methods=['POST'])
+@app.paradigm_validate_input
+def compute_counterfactual():
+    """Compute counterfactual analysis for a transaction"""
+    try:
+        data = request.get_json()
+        transaction_data = Transaction(**data.get('transaction', {}))
+        account_id = data.get('account_id', f"account_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.fraud_tools.compute_counterfactual(transaction_data, account_id))
+        
+        return jsonify({
+            'success': True,
+            'result': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Counterfactual computation error: {e}")
+        return jsonify({'error': 'Counterfactual computation failed'}), 500
+
+# AI Conversation Service Endpoints
+
+@app.route('/api/conversation/chat', methods=['POST'])
+@app.paradigm_validate_input
+def fraud_chat():
+    """Process a fraud detection chat request"""
+    try:
+        data = request.get_json()
+        chat_request = FraudChatRequest(**data.get('request', {}))
+        user_context_data = data.get('user_context', {})
+        user_context = UserContext(**user_context_data)
+        
+        # Run async function in main thread
+        response = asyncio.run(fraud_agent.conversation_service.get_fraud_response_async(
+            chat_request, user_context
+        ))
+        
+        return jsonify({
+            'success': True,
+            'response': response.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Fraud chat error: {e}")
+        return jsonify({'error': 'Fraud chat failed'}), 500
+
+@app.route('/api/conversation/start', methods=['POST'])
+@app.paradigm_validate_input
+def start_conversation():
+    """Start a new conversation"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        conversation_id = asyncio.run(fraud_agent.conversation_service.start_conversation_async(user_id))
+        
+        return jsonify({
+            'success': True,
+            'conversation_id': conversation_id,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Start conversation error: {e}")
+        return jsonify({'error': 'Start conversation failed'}), 500
+
+@app.route('/api/conversation/<conversation_id>/end', methods=['POST'])
+def end_conversation(conversation_id):
+    """End a conversation"""
+    try:
+        # Run async function in main thread
+        success = asyncio.run(fraud_agent.conversation_service.end_conversation_async(conversation_id))
+        
+        return jsonify({
+            'success': success,
+            'conversation_id': conversation_id,
+            'message': 'Conversation ended successfully' if success else 'Conversation not found',
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ End conversation error: {e}")
+        return jsonify({'error': 'End conversation failed'}), 500
+
+@app.route('/api/conversation/<conversation_id>/history', methods=['GET'])
+def get_conversation_history(conversation_id):
+    """Get conversation history"""
+    try:
+        max_messages = request.args.get('max_messages', 50, type=int)
+        
+        # Run async function in main thread
+        messages = asyncio.run(fraud_agent.conversation_service.get_conversation_history_async(
+            conversation_id, max_messages
+        ))
+        
+        return jsonify({
+            'success': True,
+            'conversation_id': conversation_id,
+            'messages': [msg.dict() for msg in messages],
+            'count': len(messages),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get conversation history error: {e}")
+        return jsonify({'error': 'Get conversation history failed'}), 500
+
+@app.route('/api/conversation/analyze-transaction', methods=['POST'])
+@app.paradigm_validate_input
+def conversation_analyze_transaction():
+    """Analyze a specific transaction for fraud indicators"""
+    try:
+        data = request.get_json()
+        analysis_request = FraudAnalysisRequest(**data.get('request', {}))
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.conversation_service.analyze_transaction_async(
+            analysis_request, user_id
+        ))
+        
+        return jsonify({
+            'success': True,
+            'analysis': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Transaction analysis error: {e}")
+        return jsonify({'error': 'Transaction analysis failed'}), 500
+
+@app.route('/api/conversation/initiate-verification', methods=['POST'])
+@app.paradigm_validate_input
+def initiate_verification():
+    """Initiate identity verification workflow"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        verification_session = asyncio.run(fraud_agent.conversation_service.initiate_verification_async(
+            user_id, transaction_id
+        ))
+        
+        return jsonify({
+            'success': True,
+            'verification_session': verification_session,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Initiate verification error: {e}")
+        return jsonify({'error': 'Initiate verification failed'}), 500
+
+@app.route('/api/conversation/validate-service', methods=['GET'])
+def validate_conversation_service():
+    """Validate conversation service configuration"""
+    try:
+        # Run async function in main thread
+        is_valid = asyncio.run(fraud_agent.conversation_service.validate_service_async())
+        
+        return jsonify({
+            'success': is_valid,
+            'service_status': 'valid' if is_valid else 'invalid',
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Service validation error: {e}")
+        return jsonify({'error': 'Service validation failed'}), 500
+
+@app.route('/api/conversation/token-usage', methods=['GET'])
+def get_token_usage_stats():
+    """Get token usage statistics"""
+    try:
+        time_range_hours = request.args.get('time_range_hours', 24, type=int)
+        
+        # Run async function in main thread
+        stats = asyncio.run(fraud_agent.conversation_service.get_token_usage_stats_async(time_range_hours))
+        
+        return jsonify({
+            'success': True,
+            'token_usage_stats': stats,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Token usage stats error: {e}")
+        return jsonify({'error': 'Token usage stats failed'}), 500
+
+# Advanced Fraud Algorithms Service Endpoints
+
+@app.route('/api/advanced-algorithms/comprehensive-risk-score', methods=['POST'])
+@app.paradigm_validate_input
+def calculate_comprehensive_risk_score():
+    """Calculate comprehensive risk score using multi-dimensional analysis"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        transaction_data = data.get('transaction_data', {})
+        platform = data.get('platform', 'api')
+        
+        # Run async function in main thread
+        risk_score = asyncio.run(fraud_agent.advanced_algorithms.calculate_comprehensive_risk_score(
+            user_id, transaction_data, platform
+        ))
+        
+        return jsonify({
+            'success': True,
+            'risk_score': risk_score.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Comprehensive risk score calculation error: {e}")
+        return jsonify({'error': 'Comprehensive risk score calculation failed'}), 500
+
+@app.route('/api/advanced-algorithms/behavioral-risk-score', methods=['POST'])
+@app.paradigm_validate_input
+def calculate_behavioral_risk_score():
+    """Calculate behavioral risk score based on user patterns"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        transaction_data = data.get('transaction_data', {})
+        platform = data.get('platform', 'api')
+        
+        # Run async function in main thread
+        behavioral_score = asyncio.run(fraud_agent.advanced_algorithms.calculate_behavioral_risk_score(
+            user_id, transaction_data, platform
+        ))
+        
+        return jsonify({
+            'success': True,
+            'behavioral_score': float(behavioral_score),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Behavioral risk score calculation error: {e}")
+        return jsonify({'error': 'Behavioral risk score calculation failed'}), 500
+
+@app.route('/api/advanced-algorithms/transactional-risk-score', methods=['POST'])
+@app.paradigm_validate_input
+def calculate_transactional_risk_score():
+    """Calculate transactional risk score based on transaction characteristics"""
+    try:
+        data = request.get_json()
+        transaction_data = data.get('transaction_data', {})
+        
+        # Run async function in main thread
+        transactional_score = asyncio.run(fraud_agent.advanced_algorithms.calculate_transactional_risk_score(
+            transaction_data
+        ))
+        
+        return jsonify({
+            'success': True,
+            'transactional_score': float(transactional_score),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Transactional risk score calculation error: {e}")
+        return jsonify({'error': 'Transactional risk score calculation failed'}), 500
+
+@app.route('/api/advanced-algorithms/network-risk-score', methods=['POST'])
+@app.paradigm_validate_input
+def calculate_network_risk_score():
+    """Calculate network risk score based on network characteristics"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        transaction_data = data.get('transaction_data', {})
+        
+        # Run async function in main thread
+        network_score = asyncio.run(fraud_agent.advanced_algorithms.calculate_network_risk_score(
+            user_id, transaction_data
+        ))
+        
+        return jsonify({
+            'success': True,
+            'network_score': float(network_score),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Network risk score calculation error: {e}")
+        return jsonify({'error': 'Network risk score calculation failed'}), 500
+
+@app.route('/api/advanced-algorithms/device-risk-score', methods=['POST'])
+@app.paradigm_validate_input
+def calculate_device_risk_score():
+    """Calculate device risk score including fingerprinting"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        transaction_data = data.get('transaction_data', {})
+        platform = data.get('platform', 'api')
+        
+        # Run async function in main thread
+        device_score = asyncio.run(fraud_agent.advanced_algorithms.calculate_device_risk_score(
+            user_id, transaction_data, platform
+        ))
+        
+        return jsonify({
+            'success': True,
+            'device_score': float(device_score),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Device risk score calculation error: {e}")
+        return jsonify({'error': 'Device risk score calculation failed'}), 500
+
+@app.route('/api/advanced-algorithms/velocity-risk-score', methods=['POST'])
+@app.paradigm_validate_input
+def calculate_velocity_risk_score():
+    """Calculate velocity risk score using sliding window analysis"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        transaction_data = data.get('transaction_data', {})
+        
+        # Run async function in main thread
+        velocity_score = asyncio.run(fraud_agent.advanced_algorithms.calculate_velocity_risk_score(
+            user_id, transaction_data
+        ))
+        
+        return jsonify({
+            'success': True,
+            'velocity_score': float(velocity_score),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Velocity risk score calculation error: {e}")
+        return jsonify({'error': 'Velocity risk score calculation failed'}), 500
+
+@app.route('/api/advanced-algorithms/detect-fraud-patterns', methods=['POST'])
+@app.paradigm_validate_input
+def advanced_detect_fraud_patterns():
+    """Detect advanced fraud patterns in transaction history"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        transaction_history = data.get('transaction_history', [])
+        
+        # Run async function in main thread
+        patterns = asyncio.run(fraud_agent.advanced_algorithms.detect_fraud_patterns(
+            user_id, transaction_history
+        ))
+        
+        return jsonify({
+            'success': True,
+            'patterns': [pattern.dict() for pattern in patterns],
+            'count': len(patterns),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Fraud pattern detection error: {e}")
+        return jsonify({'error': 'Fraud pattern detection failed'}), 500
+
+@app.route('/api/advanced-algorithms/advanced-analytics', methods=['POST'])
+@app.paradigm_validate_input
+def get_advanced_analytics():
+    """Get advanced analytics data for a user"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        analysis_type = data.get('analysis_type', 'comprehensive')
+        
+        # Run async function in main thread
+        analytics = asyncio.run(fraud_agent.advanced_algorithms.get_advanced_analytics(
+            user_id, analysis_type
+        ))
+        
+        return jsonify({
+            'success': True,
+            'analytics': analytics.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Advanced analytics error: {e}")
+        return jsonify({'error': 'Advanced analytics failed'}), 500
+
+# Additional Controller Endpoints (migrated from C# FraudDetectionController)
+
+@app.route('/api/frauddetection/test', methods=['GET'])
+def test_endpoint():
+    """Simple test endpoint"""
+    try:
+        return jsonify({
+            'status': 'API is working',
+            'timestamp': datetime.now().isoformat(),
+            'port': fraud_agent.port
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Test endpoint failed: {e}")
+        return jsonify({'error': 'Test endpoint failed', 'message': str(e)}), 500
+
+@app.route('/api/frauddetection/verify-identity', methods=['POST'])
+@app.paradigm_validate_input
+def verify_identity():
+    """Verify user identity using specified method"""
+    try:
+        data = request.get_json()
+        verification_method = data.get('verification_method', '')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        is_verified = asyncio.run(fraud_agent.fraud_tools.verify_user_identity(
+            user_id, verification_method
+        ))
+        
+        return jsonify({
+            'verified': is_verified,
+            'method': verification_method,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Identity verification error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/frauddetection/analyze-transaction', methods=['POST'])
+@app.paradigm_validate_input
+def frauddetection_analyze_transaction():
+    """Analyze a transaction for fraud indicators"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        amount = data.get('amount', 0.0)
+        merchant_name = data.get('merchant_name', '')
+        location = data.get('location', '')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        result = asyncio.run(fraud_agent.fraud_tools.calculate_transaction_risk_score(
+            transaction_id, amount, merchant_name, location
+        ))
+        
+        return jsonify({
+            'success': True,
+            'result': result.dict(),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Transaction analysis error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/frauddetection/analyze', methods=['POST'])
+@app.paradigm_validate_input
+def analyze():
+    """Alias endpoint to support demo scripts expecting /api/frauddetection/analyze"""
+    return frauddetection_analyze_transaction()
+
+@app.route('/api/frauddetection/verify', methods=['POST'])
+@app.paradigm_validate_input
+def verify_transaction():
+    """Fraud verification workflow for transactions requiring additional verification"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        verification_method = data.get('verification_method', 'sms')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        verification_result = asyncio.run(fraud_agent.conversation_service.initiate_verification(
+            user_id, transaction_id
+        ))
+        
+        response = {
+            'verification_id': str(uuid.uuid4()),
+            'status': 'PENDING',
+            'method': verification_method,
+            'expires_at': (datetime.now() + timedelta(minutes=5)).isoformat(),
+            'challenges': [{
+                'challenge_id': str(uuid.uuid4()),
+                'type': verification_method,
+                'prompt': f'Please verify your identity using {verification_method}',
+                'parameters': {}
+            }]
+        }
+        
+        return jsonify({
+            'success': True,
+            'verification': response,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Transaction verification error: {e}")
+        return jsonify({'error': 'An error occurred processing verification request'}), 500
+
+@app.route('/api/frauddetection/assess-risk', methods=['POST'])
+@app.paradigm_validate_input
+def assess_risk():
+    """Risk assessment endpoint for transactions and activities across all platforms"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        transaction_data = data.get('transaction_data', {})
+        user_context = data.get('user_context', {})
+        device_context = data.get('device_context', {})
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Create analysis request
+        analysis_request = {
+            'transaction_id': transaction_id,
+            'transaction_data': transaction_data,
+            'user_context': user_context,
+            'device_context': device_context
+        }
+        
+        # Run async function in main thread
+        risk_result = asyncio.run(fraud_agent.conversation_service.analyze_transaction(
+            analysis_request, user_id
+        ))
+        
+        response = {
+            'score': float(risk_result.get('risk_score', {}).get('score', 0.0)),
+            'level': risk_result.get('risk_level', 'UNKNOWN'),
+            'factors': risk_result.get('risk_score', {}).get('factors', []),
+            'recommended_action': risk_result.get('recommended_action', 'MANUAL_REVIEW'),
+            'confidence': float(risk_result.get('risk_score', {}).get('confidence', 0.0))
+        }
+        
+        return jsonify({
+            'success': True,
+            'risk_assessment': response,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Risk assessment error: {e}")
+        return jsonify({'error': 'An error occurred assessing transaction risk'}), 500
+
+@app.route('/api/frauddetection/rules/evaluate', methods=['POST'])
+@app.paradigm_validate_input
+def evaluate_fraud_rules():
+    """Evaluate configured fraud rules directly against a transaction"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+        amount = data.get('amount', 0.0)
+        merchant_name = data.get('merchant_name', '')
+        location = data.get('location', '')
+        device_id = data.get('device_id', '')
+        transaction_time = data.get('transaction_time', datetime.now().isoformat())
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Create transaction object
+        transaction = {
+            'id': transaction_id,
+            'account_id': user_id,
+            'amount': amount,
+            'merchant_name': merchant_name,
+            'location': location,
+            'device_id': device_id,
+            'timestamp': transaction_time
+        }
+        
+        # Run async function in main thread
+        evaluation_result = asyncio.run(fraud_agent.fraud_tools.evaluate_rules(
+            transaction, user_id
+        ))
+        
+        # Calculate hint for improvement
+        hint = None
+        if evaluation_result.get('recommended_action', '').upper() != 'APPROVE':
+            try:
+                cf = asyncio.run(fraud_agent.fraud_tools.compute_counterfactual(
+                    transaction, user_id
+                ))
+                if cf.get('best_change'):
+                    param = cf['best_change'].get('param', '')
+                    value = cf['best_change'].get('value', '')
+                    if param == 'amount':
+                        hint = f"Try lowering the amount to ${value}"
+                    elif param == 'time':
+                        hint = "Try making the transaction a bit later to reduce risk."
+                    elif param == 'location':
+                        hint = "Confirm your current location or update your profile location to reduce verification."
+            except:
+                pass  # best-effort
+        
+        return jsonify({
+            'success': True,
+            'transaction_id': transaction_id,
+            'score': float(evaluation_result.get('score', 0.0)),
+            'recommended_action': evaluation_result.get('recommended_action', 'MANUAL_REVIEW'),
+            'risk_factors': evaluation_result.get('risk_factors', []),
+            'hint': hint,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Rules evaluation error: {e}")
+        return jsonify({'error': 'An error occurred evaluating rules for the transaction'}), 500
+
+@app.route('/api/frauddetection/risk/<transaction_id>', methods=['GET'])
+@app.paradigm_validate_input
+def get_risk_assessment(transaction_id):
+    """Get fraud risk assessment for a transaction"""
+    try:
+        user_id = request.args.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Create risk assessment request
+        request_data = {
+            'transaction_id': transaction_id,
+            'user_id': user_id,
+            'amount': 0,  # Default amount
+            'context': {
+                'source': 'api_request',
+                'timestamp': datetime.now().isoformat()
+            }
+        }
+        
+        # Run async function in main thread
+        risk_assessment = asyncio.run(fraud_agent.conversation_service.assess_risk(
+            request_data
+        ))
+        
+        return jsonify({
+            'success': True,
+            'risk_assessment': risk_assessment,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Risk assessment retrieval error: {e}")
+        return jsonify({'error': 'An error occurred getting risk assessment'}), 500
+
+@app.route('/api/frauddetection/alerts/<alert_id>/status', methods=['PUT'])
+@app.paradigm_validate_input
+def update_alert_status(alert_id):
+    """Update fraud alert status"""
+    try:
+        data = request.get_json()
+        status = data.get('status', '')
+        notes = data.get('notes', '')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        success = asyncio.run(fraud_agent.fraud_tools.update_alert_status(
+            alert_id, status, user_id
+        ))
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Alert status updated successfully',
+                'agent': fraud_agent.agent_name,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'error': 'Alert not found or access denied'}), 404
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Alert status update error: {e}")
+        return jsonify({'error': 'An error occurred updating alert status'}), 500
+
+@app.route('/api/frauddetection/transactions/<transaction_id>/block', methods=['POST'])
+@app.paradigm_validate_input
+def block_transaction(transaction_id):
+    """Block a suspicious transaction"""
+    try:
+        data = request.get_json()
+        reason = data.get('reason', 'Suspicious activity detected')
+        additional_notes = data.get('additional_notes', '')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        success = asyncio.run(fraud_agent.fraud_tools.block_transaction(
+            transaction_id, reason, user_id
+        ))
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Transaction blocked successfully',
+                'agent': fraud_agent.agent_name,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'error': 'Transaction not found or already processed'}), 404
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Transaction blocking error: {e}")
+        return jsonify({'error': 'An error occurred blocking the transaction'}), 500
+
+@app.route('/api/frauddetection/transactions/<transaction_id>/approve', methods=['POST'])
+@app.paradigm_validate_input
+def approve_transaction(transaction_id):
+    """Approve a flagged transaction"""
+    try:
+        user_id = request.args.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        success = asyncio.run(fraud_agent.fraud_tools.approve_transaction(
+            transaction_id, user_id
+        ))
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Transaction approved successfully',
+                'agent': fraud_agent.agent_name,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'error': 'Transaction not found or already processed'}), 404
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Transaction approval error: {e}")
+        return jsonify({'error': 'An error occurred approving the transaction'}), 500
+
+@app.route('/api/frauddetection/feedback', methods=['POST'])
+@app.paradigm_validate_input
+def frauddetection_record_feedback():
+    """Record feedback for a transaction decision to improve personalization"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', '')
+        label = data.get('label', '')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        if not transaction_id:
+            return jsonify({'error': 'transactionId is required'}), 400
+        if not label:
+            return jsonify({'error': 'label is required (true_positive|false_positive)'}), 400
+        
+        # Create feedback object
+        feedback = {
+            'transaction_id': transaction_id,
+            'user_id': user_id,
+            'label': label,
+            'timestamp': datetime.now().isoformat(),
+            'dimensions': data.get('dimensions', {})
+        }
+        
+        # Run async function in main thread
+        success = asyncio.run(fraud_agent.fraud_tools.record_feedback(feedback))
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Feedback recorded',
+                'agent': fraud_agent.agent_name,
+                'timestamp': datetime.now().isoformat()
+            }), 202
+        else:
+            return jsonify({'error': 'Unable to record feedback'}), 500
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Feedback recording error: {e}")
+        return jsonify({'error': 'An error occurred recording feedback'}), 500
+
+@app.route('/api/frauddetection/feedback/analyst', methods=['POST'])
+@app.paradigm_validate_input
+def record_analyst_feedback():
+    """Record analyst resolutions and map to feedback counters for personalization"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id', '')
+        label = data.get('label', '')
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        if not transaction_id:
+            return jsonify({'error': 'transactionId is required'}), 400
+        if not label:
+            return jsonify({'error': 'label is required'}), 400
+        
+        # Create feedback object with analyst provenance
+        feedback = {
+            'transaction_id': transaction_id,
+            'user_id': user_id,
+            'label': label,
+            'timestamp': datetime.now().isoformat(),
+            'dimensions': data.get('dimensions', {}),
+            'source': 'analyst'
+        }
+        
+        # Run async function in main thread
+        success = asyncio.run(fraud_agent.fraud_tools.record_feedback(feedback))
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Analyst feedback accepted',
+                'agent': fraud_agent.agent_name,
+                'timestamp': datetime.now().isoformat()
+            }), 202
+        else:
+            return jsonify({'error': 'Failed to record analyst feedback'}), 500
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Analyst feedback recording error: {e}")
+        return jsonify({'error': 'Internal error'}), 500
+
+@app.route('/api/frauddetection/transactions/suspicious', methods=['GET'])
+@app.paradigm_validate_input
+def get_suspicious_transactions():
+    """Get suspicious transactions for analysis"""
+    try:
+        account_id = request.args.get('account_id', '')
+        days = int(request.args.get('days', 30))
+        user_id = request.args.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # If no accountId provided, use user's primary account
+        if not account_id:
+            account_id = user_id
+        
+        # Run async function in main thread
+        transactions = asyncio.run(fraud_agent.fraud_tools.get_suspicious_transactions(
+            account_id, days
+        ))
+        
+        return jsonify({
+            'success': True,
+            'transactions': transactions,
+            'count': len(transactions),
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError) as e:
+        logger.error(f"❌ Suspicious transactions retrieval error: {e}")
+        return jsonify({'error': 'An error occurred retrieving suspicious transactions'}), 500
+
+@app.route('/api/frauddetection/assessment/<transaction_id>', methods=['GET'])
+@app.paradigm_validate_input
+def get_fraud_assessment(transaction_id):
+    """Get comprehensive fraud assessment"""
+    try:
+        user_id = request.args.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        # Run async function in main thread
+        assessment = asyncio.run(fraud_agent.fraud_tools.get_comprehensive_fraud_assessment(
+            transaction_id
+        ))
+        
+        return jsonify({
+            'success': True,
+            'assessment': assessment,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Fraud assessment retrieval error: {e}")
+        return jsonify({'error': 'An error occurred getting fraud assessment'}), 500
+
+@app.route('/api/frauddetection/counterfactual', methods=['POST'])
+@app.paradigm_validate_input
+def counterfactual_analysis():
+    """Perform counterfactual analysis on a transaction to determine margin-to-safe"""
+    try:
+        data = request.get_json()
+        transaction = data.get('transaction', {})
+        user_id = data.get('user_id', f"user_{uuid.uuid4().hex[:8]}")
+        
+        if not transaction:
+            return jsonify({'error': 'Transaction data is required'}), 400
+        
+        # Run async function in main thread
+        response = asyncio.run(fraud_agent.fraud_tools.compute_counterfactual(
+            transaction, user_id
+        ))
+        
+        return jsonify({
+            'success': True,
+            'counterfactual_analysis': response,
+            'agent': fraud_agent.agent_name,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Counterfactual analysis error: {e}")
+        return jsonify({'error': 'An error occurred processing your counterfactual analysis request'}), 500
+
+@app.route('/api/statistics', methods=['GET'])
+@app.paradigm_require_api_key('internal')
+def get_statistics():
+    """Get fraud detection statistics"""
+    return jsonify(fraud_agent.get_statistics())
+
+@app.route('/api/sdk/docs', methods=['GET'])
+def get_sdk_documentation():
+    """Get SDK documentation and examples"""
+    return jsonify({
+        'title': 'ParadigmStore Universal Fraud Detection SDK',
+        'version': '1.0.0',
+        'description': 'Universal fraud detection for all programming languages and platforms',
+        'supported_languages': [
+            'C# (.NET, MAUI, ASP.NET, Blazor)',
+            'JavaScript (Node.js, React, Vue, Angular)',
+            'Python (Django, Flask, FastAPI)',
+            'Java (Spring, Android)',
+            'PHP (Laravel, WordPress)',
+            'Ruby (Rails)',
+            'Go'
+        ],
+        'installation': {
+            'nuget': 'Install-Package ParadigmStore.FraudDetection',
+            'npm': 'npm install @paradigmstore/fraud-detection',
+            'pip': 'pip install paradigmstore-fraud-detection'
+        },
+        'usage_examples': {
+            'csharp': 'FraudDetection.Initialize("YOUR_API_KEY"); var result = await FraudDetection.AnalyzeAsync(transaction);',
+            'javascript': 'FraudDetection.init("YOUR_API_KEY"); const result = await FraudDetection.analyze(transaction);',
+            'python': 'fraud_detection.initialize("YOUR_API_KEY"); result = fraud_detection.analyze(transaction)'
+        },
+        'endpoints': {
+            'analyze': '/api/sdk/analyze',
+            'register': '/api/sdk/register',
+            'health': '/health'
+        }
+    })
+
+@app.route('/config', methods=['GET'])
+def get_configuration():
+    """Get current configuration settings."""
+    try:
+        config_manager = get_config_manager()
+        config = config_manager.get_config()
+        
+        return jsonify({
+            'status': 'success',
+            'configuration': config.dict(),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Error getting configuration: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@app.route('/config/<section>', methods=['GET'])
+def get_configuration_section(section: str):
+    """Get a specific configuration section."""
+    try:
+        config_manager = get_config_manager()
+        section_config = config_manager.get_section(section)
+        
+        return jsonify({
+            'status': 'success',
+            'section': section,
+            'configuration': section_config,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Error getting configuration section {section}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@app.route('/config/<section>/<setting>', methods=['GET'])
+def get_configuration_setting(section: str, setting: str):
+    """Get a specific configuration setting."""
+    try:
+        config_manager = get_config_manager()
+        value = config_manager.get_setting(section, setting)
+        
+        return jsonify({
+            'status': 'success',
+            'section': section,
+            'setting': setting,
+            'value': value,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Error getting configuration setting {section}.{setting}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@app.route('/config/<section>/<setting>', methods=['PUT'])
+def update_configuration_setting(section: str, setting: str):
+    """Update a specific configuration setting."""
+    try:
+        data = request.get_json()
+        if not data or 'value' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Value is required',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 400
+            
+        config_manager = get_config_manager()
+        config_manager.update_setting(section, setting, data['value'])
+        
+        return jsonify({
+            'status': 'success',
+            'section': section,
+            'setting': setting,
+            'value': data['value'],
+            'message': 'Configuration updated successfully',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Error updating configuration setting {section}.{setting}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@app.route('/config/reload', methods=['POST'])
+def reload_configuration():
+    """Reload configuration from file."""
+    try:
+        config_manager = get_config_manager()
+        config_manager.load_config()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Configuration reloaded successfully',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Error reloading configuration: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+@app.route('/config/save', methods=['POST'])
+def save_configuration():
+    """Save current configuration to file."""
+    try:
+        config_manager = get_config_manager()
+        config_manager.save_config()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Configuration saved successfully',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Error saving configuration: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+
+# Authentication endpoints
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """User login endpoint."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'error': 'Invalid request',
+                'message': 'Request body is required',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 400
+        
+        from fraud_detection.security_models import LoginRequest
+        login_request = LoginRequest(**data)
+        
+        login_response = fraud_agent.auth_service.login(login_request)
+        if not login_response:
+            return jsonify({
+                'error': 'Authentication failed',
+                'message': 'Invalid credentials',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 401
+        
+        return jsonify({
+            'status': 'success',
+            'data': login_response.dict(),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Login error: {e}")
+        return jsonify({
+            'error': 'Login failed',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+
+@app.route('/api/auth/refresh', methods=['POST'])
+def refresh_token():
+    """Refresh access token endpoint."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'error': 'Invalid request',
+                'message': 'Request body is required',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 400
+        
+        from fraud_detection.security_models import RefreshTokenRequest
+        refresh_request = RefreshTokenRequest(**data)
+        
+        new_access_token = fraud_agent.auth_service.refresh_token(refresh_request)
+        if not new_access_token:
+            return jsonify({
+                'error': 'Token refresh failed',
+                'message': 'Invalid refresh token',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 401
+        
+        return jsonify({
+            'status': 'success',
+            'access_token': new_access_token,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Token refresh error: {e}")
+        return jsonify({
+            'error': 'Token refresh failed',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+@fraud_agent.security_middleware.authenticate_request
+def logout():
+    """User logout endpoint."""
+    try:
+        data = request.get_json() or {}
+        
+        from fraud_detection.security_models import LogoutRequest
+        logout_request = LogoutRequest(**data)
+        
+        from fraud_detection.security_middleware import get_current_user
+        user_context = get_current_user()
+        
+        success = fraud_agent.auth_service.logout(logout_request, user_context)
+        
+        return jsonify({
+            'status': 'success' if success else 'error',
+            'message': 'Logged out successfully' if success else 'Logout failed',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Logout error: {e}")
+        return jsonify({
+            'error': 'Logout failed',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+
+@app.route('/api/auth/me', methods=['GET'])
+@fraud_agent.security_middleware.authenticate_request
+def get_current_user_info():
+    """Get current user information."""
+    try:
+        from fraud_detection.security_middleware import get_current_user
+        user_context = get_current_user()
+        
+        if not user_context:
+            return jsonify({
+                'error': 'Unauthorized',
+                'message': 'User not authenticated',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 401
+        
+        return jsonify({
+            'status': 'success',
+            'user': user_context.dict(),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Get user info error: {e}")
+        return jsonify({
+            'error': 'Failed to get user info',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+
+@app.route('/api/auth/permissions', methods=['GET'])
+@fraud_agent.security_middleware.authenticate_request
+def get_user_permissions():
+    """Get user permissions."""
+    try:
+        from fraud_detection.security_middleware import get_current_user
+        user_context = get_current_user()
+        
+        if not user_context:
+            return jsonify({
+                'error': 'Unauthorized',
+                'message': 'User not authenticated',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 401
+        
+        permissions = fraud_agent.authz_service.get_user_permissions(user_context)
+        accessible_resources = fraud_agent.authz_service.get_accessible_resources(user_context)
+        
+        return jsonify({
+            'status': 'success',
+            'permissions': [p.value for p in permissions],
+            'accessible_resources': accessible_resources,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Get permissions error: {e}")
+        return jsonify({
+            'error': 'Failed to get permissions',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+
+@app.route('/api/auth/security-metrics', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_security_metrics():
+    """Get security metrics (admin only)."""
+    try:
+        metrics = fraud_agent.auth_service.get_security_metrics()
+        audit_logs = fraud_agent.auth_service.get_audit_logs(limit=100)
+        
+        return jsonify({
+            'status': 'success',
+            'metrics': metrics.dict(),
+            'recent_audit_logs': [log.dict() for log in audit_logs],
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"Get security metrics error: {e}")
+        return jsonify({
+            'error': 'Failed to get security metrics',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
+# Performance monitoring endpoints
+@app.route('/api/performance/metrics', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_performance_metrics():
+    """Get performance metrics"""
+    try:
+        endpoint = request.args.get('endpoint')
+        metrics = fraud_agent.performance_monitor.get_metrics(endpoint)
+        return jsonify(metrics)
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Performance metrics error: {e}")
+        return jsonify({'error': 'Failed to get performance metrics'}), 500
+
+@app.route('/api/performance/summary', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_performance_summary():
+    """Get performance summary"""
+    try:
+        summary = fraud_agent.performance_monitor.get_performance_summary()
+        return jsonify(summary)
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Performance summary error: {e}")
+        return jsonify({'error': 'Failed to get performance summary'}), 500
+
+@app.route('/api/performance/system', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_system_metrics():
+    """Get system metrics"""
+    try:
+        metrics = fraud_agent.performance_monitor.get_system_metrics()
+        return jsonify(metrics)
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ System metrics error: {e}")
+        return jsonify({'error': 'Failed to get system metrics'}), 500
+
+@app.route('/api/performance/optimize', methods=['POST'])
+@fraud_agent.security_middleware.require_permission(Permission.UPDATE_CONFIG)
+def optimize_performance():
+    """Apply performance optimizations"""
+    try:
+        fraud_agent.performance_optimizer.apply_optimizations()
+        recommendations = fraud_agent.performance_optimizer.get_optimization_recommendations()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Performance optimizations applied',
+            'recommendations': recommendations
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Performance optimization error: {e}")
+        return jsonify({'error': 'Failed to optimize performance'}), 500
+
+@app.route('/api/database/statistics', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_database_statistics():
+    """Get database statistics"""
+    try:
+        stats = asyncio.run(fraud_agent.database_service.get_transaction_statistics())
+        return jsonify(stats)
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Database statistics error: {e}")
+        return jsonify({'error': 'Failed to get database statistics'}), 500
+
+@app.route('/api/data-quality/validate', methods=['POST'])
+@fraud_agent.security_middleware.require_permission(Permission.ANALYZE_TRANSACTIONS)
+def validate_data_quality():
+    """Validate data quality"""
+    try:
+        data = request.get_json()
+        training_data = data.get('data', [])
+        
+        metrics = asyncio.run(fraud_agent.data_quality_service.validate_data(training_data))
+        
+        return jsonify({
+            'success': True,
+            'metrics': {
+                'completeness_score': metrics.completeness_score,
+                'accuracy_score': metrics.accuracy_score,
+                'consistency_score': metrics.consistency_score,
+                'validity_score': metrics.validity_score,
+                'uniqueness_score': metrics.uniqueness_score,
+                'overall_score': metrics.overall_score,
+                'quality_level': metrics.quality_level.value,
+                'total_records': metrics.total_records,
+                'valid_records': metrics.valid_records,
+                'invalid_records': metrics.invalid_records,
+                'validation_errors': [
+                    {
+                        'field_name': error.field_name,
+                        'rule': error.rule.value,
+                        'passed': error.passed,
+                        'message': error.message,
+                        'severity': error.severity
+                    } for error in metrics.validation_errors
+                ]
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Data quality validation error: {e}")
+        return jsonify({'error': 'Failed to validate data quality'}), 500
+
+@app.route('/api/data-quality/summary', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_data_quality_summary():
+    """Get data quality summary"""
+    try:
+        summary = asyncio.run(fraud_agent.data_quality_service.get_quality_summary())
+        return jsonify(summary)
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Data quality summary error: {e}")
+        return jsonify({'error': 'Failed to get data quality summary'}), 500
+
+@app.route('/api/ml-training/train', methods=['POST'])
+@fraud_agent.security_middleware.require_permission(Permission.UPDATE_CONFIG)
+def train_ml_model():
+    """Train ML model"""
+    try:
+        data = request.get_json()
+        training_data = data.get('training_data', [])
+        model_type = data.get('model_type', 'xgboost')
+        model_name = data.get('model_name', 'fraud_detection')
+        
+        if not training_data:
+            return jsonify({'error': 'Training data is required'}), 400
+        
+        # Train model
+        model_version = asyncio.run(fraud_agent.ml_training_pipeline.train_model(
+            training_data, model_name=model_name
+        ))
+        
+        return jsonify({
+            'success': True,
+            'model_version': {
+                'version_id': model_version.version_id,
+                'model_type': model_version.model_type.value,
+                'metrics': {
+                    'accuracy': model_version.metrics.accuracy,
+                    'precision': model_version.metrics.precision,
+                    'recall': model_version.metrics.recall,
+                    'f1_score': model_version.metrics.f1_score,
+                    'roc_auc': model_version.metrics.roc_auc
+                },
+                'training_data_size': model_version.training_data_size,
+                'training_duration': model_version.training_duration,
+                'created_at': model_version.created_at.isoformat(),
+                'status': model_version.status.value
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ ML training error: {e}")
+        return jsonify({'error': f'Failed to train model: {str(e)}'}), 500
+
+@app.route('/api/ml-training/models', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_ml_models():
+    """Get ML models"""
+    try:
+        models = asyncio.run(fraud_agent.ml_training_pipeline.get_model_versions())
+        
+        return jsonify({
+            'success': True,
+            'models': [
+                {
+                    'version_id': model.version_id,
+                    'model_type': model.model_type.value,
+                    'metrics': {
+                        'accuracy': model.metrics.accuracy,
+                        'precision': model.metrics.precision,
+                        'recall': model.metrics.recall,
+                        'f1_score': model.metrics.f1_score,
+                        'roc_auc': model.metrics.roc_auc
+                    },
+                    'training_data_size': model.training_data_size,
+                    'training_duration': model.training_duration,
+                    'created_at': model.created_at.isoformat(),
+                    'status': model.status.value
+                } for model in models
+            ]
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get ML models error: {e}")
+        return jsonify({'error': 'Failed to get ML models'}), 500
+
+@app.route('/api/ml-training/status', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_ml_training_status():
+    """Get ML training status"""
+    try:
+        status = asyncio.run(fraud_agent.ml_training_pipeline.get_training_status())
+        return jsonify(status)
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ ML training status error: {e}")
+        return jsonify({'error': 'Failed to get ML training status'}), 500
+
+@app.route('/api/feature-engineering/engineer', methods=['POST'])
+@fraud_agent.security_middleware.require_permission(Permission.ANALYZE_TRANSACTIONS)
+def engineer_features():
+    """Engineer features from raw data"""
+    try:
+        data = request.get_json()
+        training_data = data.get('data', [])
+        target_column = data.get('target_column', 'is_fraud')
+        
+        if not training_data:
+            return jsonify({'error': 'Training data is required'}), 400
+        
+        # Engineer features
+        result = asyncio.run(fraud_agent.feature_engineering_service.engineer_features(
+            training_data, target_column
+        ))
+        
+        return jsonify({
+            'success': True,
+            'result': {
+                'original_features': result.original_features,
+                'engineered_features': result.engineered_features,
+                'total_features': result.total_features,
+                'processing_time': result.processing_time,
+                'feature_importance_scores': result.feature_importance_scores,
+                'feature_definitions': [
+                    {
+                        'name': fd.name,
+                        'feature_type': fd.feature_type.value,
+                        'importance': fd.importance.value,
+                        'description': fd.description,
+                        'source_columns': fd.source_columns,
+                        'transformation': fd.transformation
+                    } for fd in result.feature_definitions
+                ]
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Feature engineering error: {e}")
+        return jsonify({'error': f'Failed to engineer features: {str(e)}'}), 500
+
+@app.route('/api/feature-engineering/select', methods=['POST'])
+@fraud_agent.security_middleware.require_permission(Permission.ANALYZE_TRANSACTIONS)
+def select_features():
+    """Select best features"""
+    try:
+        data = request.get_json()
+        training_data = data.get('data', [])
+        target_column = data.get('target_column', 'is_fraud')
+        k_best = data.get('k_best', 20)
+        method = data.get('method', 'mutual_info')
+        
+        if not training_data:
+            return jsonify({'error': 'Training data is required'}), 400
+        
+        # Convert to DataFrame for feature selection
+        import pandas as pd
+        df = pd.DataFrame(training_data)
+        
+        # Select features
+        result = asyncio.run(fraud_agent.feature_engineering_service.select_features(
+            df, target_column, k_best, method
+        ))
+        
+        return jsonify({
+            'success': True,
+            'result': {
+                'selected_features': result.selected_features,
+                'feature_scores': result.feature_scores,
+                'selection_method': result.selection_method,
+                'k_best': result.k_best,
+                'total_features_before': result.total_features_before,
+                'total_features_after': result.total_features_after,
+                'processing_time': result.processing_time
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Feature selection error: {e}")
+        return jsonify({'error': f'Failed to select features: {str(e)}'}), 500
+
+@app.route('/api/feature-engineering/summary', methods=['GET'])
+@fraud_agent.security_middleware.require_permission(Permission.VIEW_AUDIT_LOGS)
+def get_feature_engineering_summary():
+    """Get feature engineering summary"""
+    try:
+        summary = asyncio.run(fraud_agent.feature_engineering_service.get_feature_engineering_summary())
+        return jsonify(summary)
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Feature engineering summary error: {e}")
+        return jsonify({'error': 'Failed to get feature engineering summary'}), 500
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify(fraud_agent.get_health())
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    """Serve fraud agent dashboard"""
+    return render_template('dashboard.html')
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint with agent information"""
+    return jsonify({
+        'agent': fraud_agent.agent_name,
+        'version': fraud_agent.version,
+        'description': 'Universal AI-Powered Fraud Detection Agent with real-time analysis and ML models',
+        'universal_sdk': {
+            'enabled': True,
+            'supported_languages': ['C#', 'JavaScript', 'Python', 'Java', 'PHP', 'Ruby', 'Go'],
+            'package_managers': ['NuGet', 'npm', 'pip', 'Maven', 'Composer', 'gem', 'go get']
+        },
+        'endpoints': {
+            'universal_analyze': '/api/sdk/analyze',
+            'register_key': '/api/sdk/register',
+            'documentation': '/api/sdk/docs',
+            'legacy_analyze': '/api/analyze',
+            'batch_analyze': '/api/batch-analyze',
+            'investment_assess_risk': '/api/investment/assess-risk',
+            'investment_validate_transaction': '/api/investment/validate-transaction',
+            'investment_detect_patterns': '/api/investment/detect-patterns',
+            'ml_predict': '/api/ml/predict',
+            'ml_ensemble_predict': '/api/ml/ensemble-predict',
+            'ml_train': '/api/ml/train',
+            'ml_evaluate': '/api/ml/evaluate/<model_id>',
+            'ml_detect_drift': '/api/ml/detect-drift/<model_id>',
+            'gnn_create_graph': '/api/gnn/create-graph',
+            'gnn_get_graphs': '/api/gnn/graphs',
+            'gnn_get_graph': '/api/gnn/graphs/<graph_id>',
+            'gnn_add_node': '/api/gnn/graphs/<graph_id>/nodes',
+            'gnn_add_edge': '/api/gnn/graphs/<graph_id>/edges',
+            'gnn_analyze_graph': '/api/gnn/graphs/<graph_id>/analyze',
+            'gnn_detect_fraud_rings': '/api/gnn/graphs/<graph_id>/fraud-rings',
+            'gnn_detect_communities': '/api/gnn/graphs/<graph_id>/communities',
+            'fraud_tools_calculate_risk_score': '/api/fraud-tools/calculate-risk-score',
+            'fraud_tools_analyze_pattern': '/api/fraud-tools/analyze-pattern',
+            'fraud_tools_detect_velocity_anomalies': '/api/fraud-tools/detect-velocity-anomalies',
+            'fraud_tools_analyze_history_risk': '/api/fraud-tools/analyze-history-risk',
+            'fraud_tools_analyze_card_operation_risk': '/api/fraud-tools/analyze-card-operation-risk',
+            'fraud_tools_detect_fraud_ring': '/api/fraud-tools/detect-fraud-ring',
+            'fraud_tools_record_feedback': '/api/fraud-tools/record-feedback',
+            'fraud_tools_compute_counterfactual': '/api/fraud-tools/compute-counterfactual',
+            'conversation_chat': '/api/conversation/chat',
+            'conversation_start': '/api/conversation/start',
+            'conversation_end': '/api/conversation/<conversation_id>/end',
+            'conversation_history': '/api/conversation/<conversation_id>/history',
+            'conversation_analyze_transaction': '/api/conversation/analyze-transaction',
+            'conversation_initiate_verification': '/api/conversation/initiate-verification',
+            'conversation_validate_service': '/api/conversation/validate-service',
+            'conversation_token_usage': '/api/conversation/token-usage',
+            'advanced_algorithms_comprehensive_risk_score': '/api/advanced-algorithms/comprehensive-risk-score',
+            'advanced_algorithms_behavioral_risk_score': '/api/advanced-algorithms/behavioral-risk-score',
+            'advanced_algorithms_transactional_risk_score': '/api/advanced-algorithms/transactional-risk-score',
+            'advanced_algorithms_network_risk_score': '/api/advanced-algorithms/network-risk-score',
+            'advanced_algorithms_device_risk_score': '/api/advanced-algorithms/device-risk-score',
+            'advanced_algorithms_velocity_risk_score': '/api/advanced-algorithms/velocity-risk-score',
+            'advanced_algorithms_detect_fraud_patterns': '/api/advanced-algorithms/detect-fraud-patterns',
+            'advanced_algorithms_advanced_analytics': '/api/advanced-algorithms/advanced-analytics',
+            'frauddetection_test': '/api/frauddetection/test',
+            'frauddetection_verify_identity': '/api/frauddetection/verify-identity',
+            'frauddetection_analyze_transaction': '/api/frauddetection/analyze-transaction',
+            'frauddetection_analyze': '/api/frauddetection/analyze',
+            'frauddetection_verify': '/api/frauddetection/verify',
+            'frauddetection_assess_risk': '/api/frauddetection/assess-risk',
+            'frauddetection_rules_evaluate': '/api/frauddetection/rules/evaluate',
+            'frauddetection_risk_assessment': '/api/frauddetection/risk/<transaction_id>',
+            'frauddetection_update_alert_status': '/api/frauddetection/alerts/<alert_id>/status',
+            'frauddetection_block_transaction': '/api/frauddetection/transactions/<transaction_id>/block',
+            'frauddetection_approve_transaction': '/api/frauddetection/transactions/<transaction_id>/approve',
+            'frauddetection_record_feedback': '/api/frauddetection/feedback',
+            'frauddetection_record_analyst_feedback': '/api/frauddetection/feedback/analyst',
+            'frauddetection_suspicious_transactions': '/api/frauddetection/transactions/suspicious',
+            'frauddetection_fraud_assessment': '/api/frauddetection/assessment/<transaction_id>',
+            'frauddetection_counterfactual': '/api/frauddetection/counterfactual',
+            'auth_login': '/api/auth/login',
+            'auth_refresh': '/api/auth/refresh',
+            'auth_logout': '/api/auth/logout',
+            'auth_me': '/api/auth/me',
+            'auth_permissions': '/api/auth/permissions',
+            'auth_security_metrics': '/api/auth/security-metrics',
+            'performance_metrics': '/api/performance/metrics',
+            'performance_summary': '/api/performance/summary',
+            'performance_system': '/api/performance/system',
+            'performance_optimize': '/api/performance/optimize',
+            'performance_test': '/api/performance/test',
+            'database_statistics': '/api/database/statistics',
+            'data_quality_validate': '/api/data-quality/validate',
+            'data_quality_summary': '/api/data-quality/summary',
+            'ml_training_train': '/api/ml-training/train',
+            'ml_training_models': '/api/ml-training/models',
+            'ml_training_status': '/api/ml-training/status',
+            'ml_training_drift': '/api/ml-training/drift/<version_id>',
+            'feature_engineering_engineer': '/api/feature-engineering/engineer',
+            'feature_engineering_select': '/api/feature-engineering/select',
+            'feature_engineering_summary': '/api/feature-engineering/summary',
+            'rules_engine_evaluate': '/api/rules-engine/evaluate',
+            'rules_engine_rules': '/api/rules-engine/rules',
+            'rules_engine_statistics': '/api/rules-engine/statistics',
+            'messaging_health': '/api/messaging/health',
+            'messaging_metrics': '/api/messaging/metrics',
+            'messaging_send_fraud_alert': '/api/messaging/send-fraud-alert',
+                    'messaging_send_transaction_analysis': '/api/messaging/send-transaction-analysis',
+                    'messaging_stats': '/api/messaging/stats',
+                    'customer_portal_cases': '/api/customer-portal/cases',
+                    'customer_portal_case_detail': '/api/customer-portal/cases/<case_id>',
+                    'customer_portal_reports': '/api/customer-portal/reports',
+                    'customer_portal_alerts': '/api/customer-portal/alerts',
+                    'customer_portal_statistics': '/api/customer-portal/statistics',
+                    'customer_portal_health': '/api/customer-portal/health',
+                    'statistics': '/api/statistics',
+                    'health': '/health'
+        },
+        'performance_targets': getattr(fraud_agent.config, 'performance_targets', {'latency_ms': 600, 'accuracy_rate': 0.95}),
+        'timestamp': datetime.now().isoformat()
+    })
+
+# Rules Engine endpoints
+@app.route('/api/rules-engine/evaluate', methods=['POST'])
+@app.paradigm_validate_input
+def rules_engine_evaluate():
+    """Evaluate rules against a transaction"""
+    try:
+        data = request.get_json()
+        transaction = data.get('transaction', {})
+        account_id = data.get('account_id', f"account_{uuid.uuid4().hex[:8]}")
+        
+        if not transaction:
+            return jsonify({'error': 'Transaction data is required'}), 400
+        
+        # Evaluate rules
+        risk_factors, recommended_action, score = asyncio.run(
+            fraud_agent.rules_engine.evaluate_async(transaction, account_id)
+        )
+        
+        return jsonify({
+            'success': True,
+            'result': {
+                'risk_factors': [
+                    {
+                        'type': factor.type,
+                        'weight': factor.weight,
+                        'description': factor.description,
+                        'severity': factor.severity.value if hasattr(factor.severity, 'value') else str(factor.severity)
+                    } for factor in risk_factors
+                ],
+                'recommended_action': recommended_action,
+                'score': score,
+                'account_id': account_id,
+                'transaction_id': transaction.get('transaction_id', f"txn_{uuid.uuid4().hex[:8]}")
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Rules evaluation error: {e}")
+        return jsonify({'error': f'Failed to evaluate rules: {str(e)}'}), 500
+
+@app.route('/api/rules-engine/rules', methods=['GET'])
+@app.paradigm_validate_input
+def get_rules():
+    """Get all dynamic rules"""
+    try:
+        rules = asyncio.run(fraud_agent.rules_engine.rule_management_service.get_all_rules_async())
+        
+        return jsonify({
+            'success': True,
+            'rules': [
+                {
+                    'rule_id': rule.rule_id,
+                    'name': rule.name,
+                    'description': rule.description,
+                    'is_enabled': rule.is_enabled,
+                    'priority': rule.priority,
+                    'conditions': [
+                        {
+                            'field': condition.field,
+                            'operator': condition.operator.value if hasattr(condition.operator, 'value') else str(condition.operator),
+                            'value': condition.value,
+                            'description': condition.description
+                        } for condition in rule.conditions
+                    ],
+                    'action': {
+                        'type': rule.action.type.value if hasattr(rule.action.type, 'value') else str(rule.action.type),
+                        'parameters': rule.action.parameters,
+                        'description': rule.action.description
+                    },
+                    'created_at': rule.created_at.isoformat(),
+                    'updated_at': rule.updated_at.isoformat(),
+                    'version': rule.version,
+                    'tags': rule.tags
+                } for rule in rules
+            ]
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get rules error: {e}")
+        return jsonify({'error': 'Failed to get rules'}), 500
+
+@app.route('/api/rules-engine/statistics', methods=['GET'])
+@app.paradigm_validate_input
+def get_rules_statistics():
+    """Get rules engine statistics"""
+    try:
+        stats = asyncio.run(fraud_agent.rules_engine.get_rule_statistics())
+        
+        return jsonify({
+            'success': True,
+            'statistics': {
+                'total_rules': stats.total_rules,
+                'enabled_rules': stats.enabled_rules,
+                'disabled_rules': stats.disabled_rules,
+                'rules_by_priority': stats.rules_by_priority,
+                'most_triggered_rules': stats.most_triggered_rules,
+                'average_execution_time_ms': stats.average_execution_time_ms,
+                'total_evaluations': stats.total_evaluations,
+                'successful_evaluations': stats.successful_evaluations,
+                'failed_evaluations': stats.failed_evaluations
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Rules statistics error: {e}")
+        return jsonify({'error': 'Failed to get rules statistics'}), 500
+
+# Messaging endpoints
+@app.route('/api/messaging/health', methods=['GET'])
+@app.paradigm_validate_input
+def get_messaging_health():
+    """Get messaging service health status"""
+    try:
+        health_status = asyncio.run(fraud_agent.messaging_service.get_health_status())
+        
+        return jsonify({
+            'success': True,
+            'health_status': {
+                'overall_status': health_status.overall_status.value if hasattr(health_status.overall_status, 'value') else str(health_status.overall_status),
+                'service_bus_status': health_status.service_bus_status.value if hasattr(health_status.service_bus_status, 'value') else str(health_status.service_bus_status),
+                'event_hubs_status': health_status.event_hubs_status.value if hasattr(health_status.event_hubs_status, 'value') else str(health_status.event_hubs_status),
+                'last_check': health_status.last_check.isoformat(),
+                'details': health_status.details,
+                'errors': health_status.errors
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Messaging health check error: {e}")
+        return jsonify({'error': 'Failed to get messaging health status'}), 500
+
+@app.route('/api/messaging/metrics', methods=['GET'])
+@app.paradigm_validate_input
+def get_messaging_metrics():
+    """Get messaging service metrics"""
+    try:
+        metrics = asyncio.run(fraud_agent.messaging_service.get_metrics())
+        
+        return jsonify({
+            'success': True,
+            'metrics': {
+                'service_bus_messages_published': metrics.service_bus_messages_published,
+                'service_bus_messages_consumed': metrics.service_bus_messages_consumed,
+                'event_hubs_events_published': metrics.event_hubs_events_published,
+                'event_hubs_events_consumed': metrics.event_hubs_events_consumed,
+                'dead_letter_queue_count': metrics.dead_letter_queue_count,
+                'average_latency_ms': metrics.average_latency_ms,
+                'success_rate': metrics.success_rate,
+                'last_updated': metrics.last_updated.isoformat(),
+                'partition_metrics': metrics.partition_metrics
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Messaging metrics error: {e}")
+        return jsonify({'error': 'Failed to get messaging metrics'}), 500
+
+@app.route('/api/messaging/send-fraud-alert', methods=['POST'])
+@app.paradigm_validate_input
+def send_fraud_alert():
+    """Send a fraud alert through messaging services"""
+    try:
+        data = request.get_json()
+        
+        # Create FraudAlert from request data
+        from fraud_detection.fraud_tools_models import FraudAlert, RiskLevel
+        
+        fraud_alert = FraudAlert(
+            id=f"alert_{uuid.uuid4().hex[:8]}",
+            transaction_id=data.get('transaction_id', ''),
+            user_id=data.get('user_id', ''),
+            risk_score=data.get('risk_score', 0.0),
+            risk_level=RiskLevel(data.get('risk_level', 'Low')),
+            requires_action=data.get('requires_action', False),
+            created_at=datetime.utcnow(),
+            risk_factors=[],
+            alert_type="HIGH_RISK_TRANSACTION",
+            severity=data.get('risk_level', 'Low'),
+            description=f"Fraud alert for transaction {data.get('transaction_id', 'unknown')}"
+        )
+        
+        # Send through messaging service
+        success = asyncio.run(fraud_agent.messaging_service.send_fraud_alert(fraud_alert))
+        
+        return jsonify({
+            'success': success,
+            'message': 'Fraud alert sent successfully' if success else 'Failed to send fraud alert',
+            'transaction_id': fraud_alert.transaction_id,
+            'timestamp': datetime.now().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Send fraud alert error: {e}")
+        return jsonify({'error': f'Failed to send fraud alert: {str(e)}'}), 500
+
+@app.route('/api/messaging/send-transaction-analysis', methods=['POST'])
+@app.paradigm_validate_input
+def send_transaction_analysis():
+    """Send transaction analysis through messaging services"""
+    try:
+        data = request.get_json()
+        
+        # Send through messaging service
+        success = asyncio.run(fraud_agent.messaging_service.send_transaction_analysis(data))
+        
+        return jsonify({
+            'success': success,
+            'message': 'Transaction analysis sent successfully' if success else 'Failed to send transaction analysis',
+            'transaction_id': data.get('transaction_id', 'unknown'),
+            'timestamp': datetime.now().isoformat()
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Send transaction analysis error: {e}")
+        return jsonify({'error': f'Failed to send transaction analysis: {str(e)}'}), 500
+
+@app.route('/api/messaging/stats', methods=['GET'])
+@app.paradigm_validate_input
+def get_messaging_stats():
+    """Get comprehensive messaging statistics"""
+    try:
+        stats = asyncio.run(fraud_agent.messaging_service.get_service_stats())
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_messages_sent': stats.total_messages_sent,
+                'total_messages_received': stats.total_messages_received,
+                'successful_messages': stats.successful_messages,
+                'failed_messages': stats.failed_messages,
+                'average_processing_time_ms': stats.average_processing_time_ms,
+                'peak_throughput_per_second': stats.peak_throughput_per_second,
+                'current_throughput_per_second': stats.current_throughput_per_second,
+                'uptime_hours': stats.uptime_hours,
+                'last_reset': stats.last_reset.isoformat()
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Messaging stats error: {e}")
+        return jsonify({'error': 'Failed to get messaging statistics'}), 500
+
+# Customer Portal endpoints
+@app.route('/api/customer-portal/cases', methods=['GET'])
+@app.paradigm_validate_input
+def get_customer_cases():
+    """Get fraud cases for a customer"""
+    try:
+        user_id = request.args.get('user_id', 'user_001')
+        cases = asyncio.run(fraud_agent.customer_portal_service.get_user_fraud_cases(user_id))
+        
+        return jsonify({
+            'success': True,
+            'cases': [
+                {
+                    'case_id': case.case_id,
+                    'case_number': case.case_number,
+                    'title': case.title,
+                    'description': case.description,
+                    'status': case.status.value if hasattr(case.status, 'value') else str(case.status),
+                    'priority': case.priority.value if hasattr(case.priority, 'value') else str(case.priority),
+                    'created_at': case.created_at.isoformat(),
+                    'updated_at': case.updated_at.isoformat(),
+                    'amount_involved': case.amount_involved,
+                    'assigned_to': case.assigned_to,
+                    'notes_count': len(case.notes)
+                } for case in cases
+            ]
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get customer cases error: {e}")
+        return jsonify({'error': 'Failed to get customer cases'}), 500
+
+@app.route('/api/customer-portal/cases', methods=['POST'])
+@app.paradigm_validate_input
+def create_customer_case():
+    """Create a new fraud case"""
+    try:
+        data = request.get_json()
+        
+        from fraud_detection.customer_portal_models import CaseCreationRequest, CaseType, CasePriority
+        
+        case_request = CaseCreationRequest(
+            user_id=data.get('user_id', 'user_001'),
+            case_type=CaseType(data.get('case_type', 'OTHER')),
+            title=data.get('title', ''),
+            description=data.get('description', ''),
+            priority=CasePriority(data.get('priority', 'Medium')),
+            transaction_id=data.get('transaction_id'),
+            amount_involved=data.get('amount_involved'),
+            metadata=data.get('metadata', {})
+        )
+        
+        case = asyncio.run(fraud_agent.customer_portal_service.create_fraud_case(case_request))
+        
+        return jsonify({
+            'success': True,
+            'case': {
+                'case_id': case.case_id,
+                'case_number': case.case_number,
+                'title': case.title,
+                'status': case.status.value if hasattr(case.status, 'value') else str(case.status),
+                'priority': case.priority.value if hasattr(case.priority, 'value') else str(case.priority),
+                'created_at': case.created_at.isoformat()
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Create customer case error: {e}")
+        return jsonify({'error': f'Failed to create case: {str(e)}'}), 500
+
+@app.route('/api/customer-portal/cases/<case_id>', methods=['GET'])
+@app.paradigm_validate_input
+def get_customer_case(case_id):
+    """Get a specific fraud case"""
+    try:
+        case = asyncio.run(fraud_agent.customer_portal_service.get_fraud_case(case_id))
+        
+        if not case:
+            return jsonify({'error': 'Case not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'case': {
+                'case_id': case.case_id,
+                'case_number': case.case_number,
+                'title': case.title,
+                'description': case.description,
+                'status': case.status.value if hasattr(case.status, 'value') else str(case.status),
+                'priority': case.priority.value if hasattr(case.priority, 'value') else str(case.priority),
+                'created_at': case.created_at.isoformat(),
+                'updated_at': case.updated_at.isoformat(),
+                'amount_involved': case.amount_involved,
+                'assigned_to': case.assigned_to,
+                'resolution': case.resolution,
+                'notes': [
+                    {
+                        'note': note.note,
+                        'created_by': note.created_by,
+                        'created_at': note.created_at.isoformat()
+                    } for note in case.notes
+                ]
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get customer case error: {e}")
+        return jsonify({'error': 'Failed to get case'}), 500
+
+@app.route('/api/customer-portal/reports', methods=['POST'])
+@app.paradigm_validate_input
+def create_fraud_report():
+    """Create a fraud report"""
+    try:
+        data = request.get_json()
+        
+        from fraud_detection.customer_portal_models import FraudReport, CaseType, CasePriority, ContactPreference
+        
+        report = FraudReport(
+            type=CaseType(data.get('type', 'OTHER')),
+            description=data.get('description', ''),
+            amount=data.get('amount'),
+            incident_date=datetime.fromisoformat(data.get('incident_date', datetime.utcnow().isoformat())),
+            priority=CasePriority(data.get('priority', 'Medium')),
+            contact_preference=ContactPreference(data.get('contact_preference', 'EMAIL')),
+            user_id=data.get('user_id', 'user_001'),
+            location=data.get('location'),
+            merchant_name=data.get('merchant_name'),
+            transaction_id=data.get('transaction_id'),
+            device_type=data.get('device_type')
+        )
+        
+        created_report = asyncio.run(fraud_agent.customer_portal_service.create_fraud_report(report))
+        
+        return jsonify({
+            'success': True,
+            'report': {
+                'id': created_report.id,
+                'type': created_report.type.value if hasattr(created_report.type, 'value') else str(created_report.type),
+                'status': created_report.status.value if hasattr(created_report.status, 'value') else str(created_report.status),
+                'submitted_date': created_report.submitted_date.isoformat()
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Create fraud report error: {e}")
+        return jsonify({'error': f'Failed to create report: {str(e)}'}), 500
+
+@app.route('/api/customer-portal/alerts', methods=['GET'])
+@app.paradigm_validate_input
+def get_customer_alerts():
+    """Get fraud alerts for a customer"""
+    try:
+        user_id = request.args.get('user_id', 'user_001')
+        alerts = asyncio.run(fraud_agent.customer_portal_service.get_user_fraud_alerts(user_id))
+        
+        return jsonify({
+            'success': True,
+            'alerts': [
+                {
+                    'id': alert.id,
+                    'alert_type': alert.alert_type,
+                    'severity': alert.severity,
+                    'message': alert.message,
+                    'created_at': alert.created_at.isoformat(),
+                    'is_read': alert.is_read,
+                    'is_resolved': alert.is_resolved
+                } for alert in alerts
+            ]
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get customer alerts error: {e}")
+        return jsonify({'error': 'Failed to get alerts'}), 500
+
+@app.route('/api/customer-portal/statistics', methods=['GET'])
+@app.paradigm_validate_input
+def get_customer_statistics():
+    """Get customer portal statistics"""
+    try:
+        user_id = request.args.get('user_id')
+        stats = asyncio.run(fraud_agent.customer_portal_service.get_case_statistics(user_id))
+        
+        return jsonify({
+            'success': True,
+            'statistics': {
+                'total_cases': stats.total_cases,
+                'open_cases': stats.open_cases,
+                'resolved_cases': stats.resolved_cases,
+                'high_priority_cases': stats.high_priority_cases,
+                'average_resolution_time_hours': stats.average_resolution_time_hours,
+                'customer_satisfaction_score': stats.customer_satisfaction_score,
+                'fraud_prevention_rate': stats.fraud_prevention_rate
+            }
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Get customer statistics error: {e}")
+        return jsonify({'error': 'Failed to get statistics'}), 500
+
+@app.route('/api/customer-portal/health', methods=['GET'])
+@app.paradigm_validate_input
+def get_customer_portal_health():
+    """Get customer portal health status"""
+    try:
+        health = asyncio.run(fraud_agent.customer_portal_service.health_check())
+        
+        return jsonify({
+            'success': True,
+            'health': health
+        })
+    except (ValueError, TypeError, AttributeError) as e:
+        logger.error(f"❌ Customer portal health check error: {e}")
+        return jsonify({'error': 'Failed to get health status'}), 500
+
+if __name__ == '__main__':
+    logger.info(f"🚀 Starting {fraud_agent.agent_name} v{fraud_agent.version}")
+    logger.info(f"🔒 Security: ParadigmStore Universal Security enabled")
+    logger.info(f"🌐 Port: {fraud_agent.port}")
+    logger.info(f"🌍 Universal SDK: Enabled for all programming languages")
+    logger.info(f"🎯 Endpoints:")
+    logger.info(f"   🔍 Universal Analysis: /api/sdk/analyze")
+    logger.info(f"   🔑 Register API Key: /api/sdk/register")
+    logger.info(f"   📖 Documentation: /api/sdk/docs")
+    logger.info(f"   📊 Batch Analysis: /api/batch-analyze")
+    logger.info(f"   📈 Investment Risk Assessment: /api/investment/assess-risk")
+    logger.info(f"   ✅ Investment Transaction Validation: /api/investment/validate-transaction")
+    logger.info(f"   🔍 Investment Pattern Detection: /api/investment/detect-patterns")
+    logger.info(f"   🤖 ML Prediction: /api/ml/predict")
+    logger.info(f"   🎯 ML Ensemble Prediction: /api/ml/ensemble-predict")
+    logger.info(f"   🏋️ ML Training: /api/ml/train")
+    logger.info(f"   📊 ML Evaluation: /api/ml/evaluate/<model_id>")
+    logger.info(f"   🔍 ML Drift Detection: /api/ml/detect-drift/<model_id>")
+    logger.info(f"   🕸️ GNN Create Graph: /api/gnn/create-graph")
+    logger.info(f"   📊 GNN Get Graphs: /api/gnn/graphs")
+    logger.info(f"   🔍 GNN Get Graph: /api/gnn/graphs/<graph_id>")
+    logger.info(f"   ➕ GNN Add Node: /api/gnn/graphs/<graph_id>/nodes")
+    logger.info(f"   🔗 GNN Add Edge: /api/gnn/graphs/<graph_id>/edges")
+    logger.info(f"   📈 GNN Analyze Graph: /api/gnn/graphs/<graph_id>/analyze")
+    logger.info(f"   🕸️ GNN Detect Fraud Rings: /api/gnn/graphs/<graph_id>/fraud-rings")
+    logger.info(f"   👥 GNN Detect Communities: /api/gnn/graphs/<graph_id>/communities")
+    logger.info(f"   🔧 Fraud Tools Calculate Risk Score: /api/fraud-tools/calculate-risk-score")
+    logger.info(f"   📊 Fraud Tools Analyze Pattern: /api/fraud-tools/analyze-pattern")
+    logger.info(f"   ⚡ Fraud Tools Detect Velocity Anomalies: /api/fraud-tools/detect-velocity-anomalies")
+    logger.info(f"   📈 Fraud Tools Analyze History Risk: /api/fraud-tools/analyze-history-risk")
+    logger.info(f"   💳 Fraud Tools Analyze Card Operation Risk: /api/fraud-tools/analyze-card-operation-risk")
+    logger.info(f"   🕸️ Fraud Tools Detect Fraud Ring: /api/fraud-tools/detect-fraud-ring")
+    logger.info(f"   📝 Fraud Tools Record Feedback: /api/fraud-tools/record-feedback")
+    logger.info(f"   🔍 Fraud Tools Compute Counterfactual: /api/fraud-tools/compute-counterfactual")
+    logger.info(f"   💬 AI Conversation Chat: /api/conversation/chat")
+    logger.info(f"   🚀 AI Conversation Start: /api/conversation/start")
+    logger.info(f"   🛑 AI Conversation End: /api/conversation/<conversation_id>/end")
+    logger.info(f"   📜 AI Conversation History: /api/conversation/<conversation_id>/history")
+    logger.info(f"   🔍 AI Conversation Analyze Transaction: /api/conversation/analyze-transaction")
+    logger.info(f"   ✅ AI Conversation Initiate Verification: /api/conversation/initiate-verification")
+    logger.info(f"   🔧 AI Conversation Validate Service: /api/conversation/validate-service")
+    logger.info(f"   📊 AI Conversation Token Usage: /api/conversation/token-usage")
+    logger.info(f"   📊 Advanced Algorithms Comprehensive Risk Score: /api/advanced-algorithms/comprehensive-risk-score")
+    logger.info(f"   🧠 Advanced Algorithms Behavioral Risk Score: /api/advanced-algorithms/behavioral-risk-score")
+    logger.info(f"   💳 Advanced Algorithms Transactional Risk Score: /api/advanced-algorithms/transactional-risk-score")
+    logger.info(f"   🌐 Advanced Algorithms Network Risk Score: /api/advanced-algorithms/network-risk-score")
+    logger.info(f"   📱 Advanced Algorithms Device Risk Score: /api/advanced-algorithms/device-risk-score")
+    logger.info(f"   ⚡ Advanced Algorithms Velocity Risk Score: /api/advanced-algorithms/velocity-risk-score")
+    logger.info(f"   🔍 Advanced Algorithms Detect Fraud Patterns: /api/advanced-algorithms/detect-fraud-patterns")
+    logger.info(f"   📈 Advanced Algorithms Advanced Analytics: /api/advanced-algorithms/advanced-analytics")
+    logger.info(f"   🧪 Fraud Detection Test: /api/frauddetection/test")
+    logger.info(f"   🔐 Fraud Detection Verify Identity: /api/frauddetection/verify-identity")
+    logger.info(f"   🔍 Fraud Detection Analyze Transaction: /api/frauddetection/analyze-transaction")
+    logger.info(f"   🔍 Fraud Detection Analyze: /api/frauddetection/analyze")
+    logger.info(f"   ✅ Fraud Detection Verify: /api/frauddetection/verify")
+    logger.info(f"   📊 Fraud Detection Assess Risk: /api/frauddetection/assess-risk")
+    logger.info(f"   ⚖️ Fraud Detection Rules Evaluate: /api/frauddetection/rules/evaluate")
+    logger.info(f"   📈 Fraud Detection Risk Assessment: /api/frauddetection/risk/<transaction_id>")
+    logger.info(f"   🚨 Fraud Detection Update Alert Status: /api/frauddetection/alerts/<alert_id>/status")
+    logger.info(f"   🚫 Fraud Detection Block Transaction: /api/frauddetection/transactions/<transaction_id>/block")
+    logger.info(f"   ✅ Fraud Detection Approve Transaction: /api/frauddetection/transactions/<transaction_id>/approve")
+    logger.info(f"   📝 Fraud Detection Record Feedback: /api/frauddetection/feedback")
+    logger.info(f"   👨‍💼 Fraud Detection Record Analyst Feedback: /api/frauddetection/feedback/analyst")
+    logger.info(f"   🔍 Fraud Detection Suspicious Transactions: /api/frauddetection/transactions/suspicious")
+    logger.info(f"   📊 Fraud Detection Fraud Assessment: /api/frauddetection/assessment/<transaction_id>")
+    logger.info(f"   🔄 Fraud Detection Counterfactual: /api/frauddetection/counterfactual")
+    logger.info(f"   📈 Statistics: /api/statistics")
+    logger.info(f"   🩺 Health: /health")
+    logger.info("--" * 40)
+    
+    app.run(host='127.0.0.1', port=fraud_agent.port, debug=False)
