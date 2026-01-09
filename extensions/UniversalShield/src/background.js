@@ -5,7 +5,7 @@
 
 // Initialize stats on install
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('🛡️ LinkedIn ScamShield installed');
+  console.log('🛡️ UniversalShield installed');
   
   chrome.storage.local.set({
     scamshield_stats: {
@@ -23,6 +23,12 @@ chrome.runtime.onInstalled.addListener(() => {
       autoScan: true,
       notifyOnScam: true
     }
+  });
+
+  // Create alarm for daily stats reset (inside onInstalled)
+  chrome.alarms.create('resetDailyStats', {
+    when: getNextMidnight(),
+    periodInMinutes: 24 * 60
   });
 });
 
@@ -83,12 +89,7 @@ function handleScamReport(data) {
   console.log('🛡️ Scam reported:', data.analysis.riskLevel, data.analysis.riskScore);
 }
 
-// Reset daily stats at midnight
-chrome.alarms.create('resetDailyStats', {
-  when: getNextMidnight(),
-  periodInMinutes: 24 * 60
-});
-
+// Listen for alarm to reset daily stats
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'resetDailyStats') {
     chrome.storage.local.get(['scamshield_stats'], (result) => {
