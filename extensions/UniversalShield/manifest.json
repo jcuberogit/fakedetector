@@ -6,7 +6,8 @@
   "author": "Paradigm",
   "homepage_url": "https://github.com/jcuberogit/universalshield",
   "permissions": [
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
