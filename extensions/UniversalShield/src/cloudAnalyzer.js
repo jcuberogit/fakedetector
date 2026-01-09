@@ -6,7 +6,7 @@
 
 class CloudAnalyzer {
   constructor(apiUrl, licenseKey) {
-    this.apiUrl = apiUrl || 'https://api.universalshield.dev';
+    this.apiUrl = apiUrl || 'https://api.tucan.store';
     this.licenseKey = licenseKey;
     this.featureExtractor = new FeatureExtractor();
   }
