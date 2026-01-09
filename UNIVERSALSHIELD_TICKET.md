@@ -339,6 +339,296 @@ const TIERS = {
 
 ---
 
+## Phase 7: PayPal Subscription Integration
+
+### Overview
+Use same PayPal Business account as NOMADA donations for UniversalShield Pro subscriptions.
+
+### Task 7.1: Create PayPal Subscription Plan
+
+**In PayPal Dashboard:**
+1. Go to PayPal Business → Products & Services → Subscriptions
+2. Create Product: "UniversalShield"
+3. Create Plan: "Pro Monthly - $4.99/month"
+4. Create Plan: "Pro Annual - $39/year"
+5. Copy **Plan IDs** for integration
+
+### Task 7.2: Create Payment Page
+
+**File:** `web/upgrade.html` (hosted on your domain)
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upgrade to UniversalShield Pro</title>
+  <script src="https://www.paypal.com/sdk/js?client-id=YOUR_CLIENT_ID&vault=true&intent=subscription"></script>
+</head>
+<body>
+  <h1>🛡️ UniversalShield Pro</h1>
+  
+  <div id="paypal-button-monthly"></div>
+  <div id="paypal-button-annual"></div>
+  
+  <script>
+    // Monthly subscription
+    paypal.Buttons({
+      style: { label: 'subscribe' },
+      createSubscription: function(data, actions) {
+        return actions.subscription.create({
+          plan_id: 'P-XXXXXXXXXXXXXXXXXXXXXXXX' // Monthly plan ID
+        });
+      },
+      onApprove: function(data, actions) {
+        // Send subscription ID to your API
+        fetch('https://api.universalshield.dev/api/v1/subscription/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscription_id: data.subscriptionID,
+            email: data.payerEmail
+          })
+        }).then(res => res.json())
+          .then(data => {
+            // Show license key to user
+            alert('Your license key: ' + data.license_key);
+          });
+      }
+    }).render('#paypal-button-monthly');
+    
+    // Annual subscription (same pattern with annual plan ID)
+  </script>
+</body>
+</html>
+```
+
+### Task 7.3: Create Subscription API Endpoints
+
+**File:** `src/api/subscription_api.py`
+
+```python
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+import secrets
+import httpx
+
+router = APIRouter(prefix="/api/v1/subscription")
+
+# PayPal API credentials (same account as NOMADA)
+PAYPAL_CLIENT_ID = "your_client_id"
+PAYPAL_SECRET = "your_secret"
+PAYPAL_API = "https://api-m.paypal.com"  # Use sandbox for testing
+
+class SubscriptionActivation(BaseModel):
+    subscription_id: str
+    email: str
+
+class LicenseValidation(BaseModel):
+    license_key: str
+
+# In-memory store (use database in production)
+licenses = {}
+
+@router.post("/activate")
+async def activate_subscription(data: SubscriptionActivation):
+    """Verify PayPal subscription and generate license key"""
+    
+    # 1. Verify subscription with PayPal API
+    async with httpx.AsyncClient() as client:
+        # Get access token
+        auth_response = await client.post(
+            f"{PAYPAL_API}/v1/oauth2/token",
+            auth=(PAYPAL_CLIENT_ID, PAYPAL_SECRET),
+            data={"grant_type": "client_credentials"}
+        )
+        access_token = auth_response.json()["access_token"]
+        
+        # Verify subscription
+        sub_response = await client.get(
+            f"{PAYPAL_API}/v1/billing/subscriptions/{data.subscription_id}",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        
+        if sub_response.status_code != 200:
+            raise HTTPException(400, "Invalid subscription")
+        
+        sub_data = sub_response.json()
+        if sub_data["status"] != "ACTIVE":
+            raise HTTPException(400, "Subscription not active")
+    
+    # 2. Generate license key
+    license_key = f"US-PRO-{secrets.token_hex(8).upper()}"
+    
+    # 3. Store license (link to subscription)
+    licenses[license_key] = {
+        "subscription_id": data.subscription_id,
+        "email": data.email,
+        "tier": "pro",
+        "active": True
+    }
+    
+    return {
+        "success": True,
+        "license_key": license_key,
+        "tier": "pro"
+    }
+
+@router.post("/validate")
+async def validate_license(data: LicenseValidation):
+    """Validate license key from extension"""
+    
+    if data.license_key not in licenses:
+        return {"valid": False, "tier": "free"}
+    
+    license_info = licenses[data.license_key]
+    
+    # TODO: Check with PayPal if subscription still active
+    
+    return {
+        "valid": license_info["active"],
+        "tier": license_info["tier"]
+    }
+
+@router.post("/webhook")
+async def paypal_webhook(payload: dict):
+    """Handle PayPal subscription events (cancel, suspend, etc.)"""
+    
+    event_type = payload.get("event_type")
+    resource = payload.get("resource", {})
+    subscription_id = resource.get("id")
+    
+    if event_type == "BILLING.SUBSCRIPTION.CANCELLED":
+        # Find and deactivate license
+        for key, info in licenses.items():
+            if info["subscription_id"] == subscription_id:
+                licenses[key]["active"] = False
+                break
+    
+    return {"status": "ok"}
+```
+
+### Task 7.4: Update Extension for License Validation
+
+**File:** `extensions/UniversalShield/src/license.js`
+
+```javascript
+const LICENSE_API = 'https://api.universalshield.dev/api/v1/subscription';
+
+async function checkLicense() {
+  const stored = await chrome.storage.sync.get(['license_key']);
+  
+  if (!stored.license_key) {
+    return { valid: false, tier: 'free' };
+  }
+  
+  try {
+    const response = await fetch(`${LICENSE_API}/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ license_key: stored.license_key })
+    });
+    
+    return await response.json();
+  } catch (error) {
+    // Offline - trust cached license for 7 days
+    const lastCheck = await chrome.storage.local.get(['license_last_check']);
+    const daysSinceCheck = (Date.now() - lastCheck.license_last_check) / (1000 * 60 * 60 * 24);
+    
+    if (daysSinceCheck < 7) {
+      return { valid: true, tier: 'pro', offline: true };
+    }
+    return { valid: false, tier: 'free' };
+  }
+}
+
+async function saveLicense(licenseKey) {
+  await chrome.storage.sync.set({ license_key: licenseKey });
+  await chrome.storage.local.set({ license_last_check: Date.now() });
+}
+
+async function openUpgradePage() {
+  chrome.tabs.create({ url: 'https://universalshield.dev/upgrade' });
+}
+```
+
+### Task 7.5: Add Upgrade Button to Popup
+
+**File:** `extensions/UniversalShield/popup/popup.html` (add before footer)
+
+```html
+<section class="upgrade-section" id="upgradeSection">
+  <h3>⭐ Upgrade to Pro</h3>
+  <ul>
+    <li>✅ Unlimited scans</li>
+    <li>✅ Cloud ML analysis</li>
+    <li>✅ Gmail & Outlook</li>
+    <li>✅ Fraud ring detection</li>
+  </ul>
+  <button class="upgrade-btn" id="upgradeBtn">
+    Upgrade - $4.99/mo
+  </button>
+  <p class="license-input" id="licenseInput" style="display:none;">
+    <input type="text" id="licenseKey" placeholder="Enter license key">
+    <button id="activateBtn">Activate</button>
+  </p>
+</section>
+```
+
+**File:** `extensions/UniversalShield/popup/popup.js` (add)
+
+```javascript
+// Check license on popup open
+document.addEventListener('DOMContentLoaded', async () => {
+  const license = await checkLicense();
+  
+  if (license.valid && license.tier === 'pro') {
+    document.getElementById('upgradeSection').innerHTML = `
+      <div class="pro-badge">⭐ Pro Active</div>
+    `;
+  }
+});
+
+// Upgrade button click
+document.getElementById('upgradeBtn').addEventListener('click', () => {
+  openUpgradePage();
+});
+
+// Show license input
+document.getElementById('upgradeBtn').addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  document.getElementById('licenseInput').style.display = 'block';
+});
+
+// Activate license
+document.getElementById('activateBtn').addEventListener('click', async () => {
+  const key = document.getElementById('licenseKey').value;
+  if (key) {
+    await saveLicense(key);
+    location.reload();
+  }
+});
+```
+
+### PayPal Setup Checklist
+
+- [ ] Same PayPal Business account as NOMADA
+- [ ] Create "UniversalShield" product in PayPal
+- [ ] Create Monthly plan ($4.99)
+- [ ] Create Annual plan ($39)
+- [ ] Copy Plan IDs to code
+- [ ] Set up webhook URL in PayPal
+- [ ] Test with PayPal Sandbox first
+- [ ] Switch to Live when ready
+
+### PayPal Fees
+
+| Plan | Price | PayPal Fee (~3.5%) | You Keep |
+|------|-------|-------------------|----------|
+| Monthly | $4.99 | $0.17 | $4.82 |
+| Annual | $39 | $1.37 | $37.63 |
+
+---
+
 ## Commands Reference
 
 ```bash
