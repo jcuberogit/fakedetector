@@ -1,159 +1,73 @@
 /**
- * LinkedIn ScamShield - Scam Detector Engine
- * 100% Open Source - MIT License
+ * UniversalShield - Scam Detector Engine
  */
 
 class ScamDetector {
-  constructor() {
-    this.patterns = ScamPatterns;
-    this.weights = RiskWeights;
+  static normalize(text) {
+    // Removes hidden characters, extra spaces, and converts to lowercase
+    return text.replace(/[\u200B-\u200D\uFEFF]/g, '').toLowerCase().trim();
   }
 
-  /**
-   * Analyze a message for scam indicators
-   * @param {string} messageText - The message content to analyze
-   * @param {Object} senderProfile - Optional sender profile data
-   * @returns {Object} Analysis result with risk score and details
-   */
-  analyzeMessage(messageText, senderProfile = null) {
-    const text = messageText.toLowerCase();
-    const results = {
-      riskScore: 0,
-      riskLevel: 'safe',
-      matchedPatterns: [],
-      categories: [],
-      recommendations: []
+  static analyze(text) {
+    const cleanText = this.normalize(text);
+    let score = 0;
+    let matches = [];
+
+    // 1. Basic Pattern Matching
+    for (const [category, patterns] of Object.entries(ScamPatterns)) {
+      patterns.forEach(regex => {
+        regex.lastIndex = 0;
+        if (regex.test(cleanText)) {
+          let weight = RiskWeights[category] || 10;
+          
+          // Gemini Prompt specific weights
+          if (regex.source.includes('k[i1]ndl[y7]')) weight = 30;
+          if (regex.source.includes('curr[e3]nt\s*l[o0]c[a4]t[i1][o0]n')) weight = 30;
+          if (regex.source.includes('y[e3][a4]r[s5]\s*[o0]f\s*[e3]xp[e3]r[i1][e3]nc[e3]')) weight = 30;
+
+          score += weight;
+          matches.push(category);
+        }
+      });
+    }
+
+    // 2. Combo: Gmail + Recruiter/Principal Title (+40 points)
+    const isRecruiterTitle = /r[e3]cru[i1]t[e3]r|pr[i1]nc[i1]p[a4]l/gi.test(cleanText);
+    const hasGmailAddress = /gm[a4][i1]l\.c[o0]m/gi.test(cleanText);
+    if (isRecruiterTitle && hasGmailAddress) {
+      score += 40;
+      matches.push('GMAIL_RECRUITER_COMBO');
+    }
+
+    // 3. Vague Physical Address (+30 points)
+    // Matches "A: United States," or similar empty/placeholder addresses
+    if (/a:\s*un[i1]t[e3]d\s*st[a4]t[e3][s5],?\s*$/gi.test(cleanText) || /a:\s*,/gi.test(cleanText)) {
+      score += 30;
+      matches.push('VAGUE_ADDRESS');
+    }
+
+    return {
+      riskScore: Math.min(score, 100),
+      riskLevel: score >= 50 ? 'scam' : (score >= 30 ? 'suspicious' : 'safe'),
+      matchedPatterns: matches,
+      isScam: score >= 50,
+      isSuspicious: score >= 30 && score < 50,
+      recommendations: score >= 50 ? ['🚨 UNIVERSAL SHIELD: BOT DETECTED', 'Report this message to LinkedIn'] : 
+                      (score >= 30 ? ['⚠️ Review carefully before responding', 'Verify sender\'s profile'] : []),
+      categories: matches
     };
-
-    // Check each pattern category
-    for (const [category, patterns] of Object.entries(this.patterns)) {
-      const matches = this.findMatches(text, patterns);
-      if (matches.length > 0) {
-        const weight = this.weights[category] || 0.5;
-        const categoryScore = Math.min(matches.length * weight * 0.2, weight);
-        results.riskScore += categoryScore;
-        results.matchedPatterns.push(...matches);
-        results.categories.push(category);
-      }
-    }
-
-    // Analyze sender profile if available
-    if (senderProfile) {
-      const profileRisk = this.analyzeProfile(senderProfile);
-      results.riskScore += profileRisk.score;
-      if (profileRisk.flags.length > 0) {
-        results.categories.push('profileRedFlags');
-        results.matchedPatterns.push(...profileRisk.flags);
-      }
-    }
-
-    // Normalize score to 0-100
-    results.riskScore = Math.min(Math.round(results.riskScore * 100), 100);
-
-    // Determine risk level
-    if (results.riskScore >= 70) {
-      results.riskLevel = 'scam';
-      results.recommendations.push('🚨 High probability scam - Do not respond');
-      results.recommendations.push('Report this message to LinkedIn');
-    } else if (results.riskScore >= 40) {
-      results.riskLevel = 'suspicious';
-      results.recommendations.push('⚠️ Review carefully before responding');
-      results.recommendations.push('Verify sender\'s profile and company');
-    } else {
-      results.riskLevel = 'safe';
-    }
-
-    return results;
   }
 
-  /**
-   * Find matching patterns in text
-   */
-  findMatches(text, patterns) {
-    const matches = [];
-    for (const pattern of patterns) {
-      if (text.includes(pattern.toLowerCase())) {
-        matches.push(pattern);
-      }
-    }
-    return matches;
+  // Compatibility method for existing content.js calls
+  analyzeMessage(text) {
+    return ScamDetector.analyze(text);
   }
 
-  /**
-   * Analyze sender profile for red flags
-   */
-  analyzeProfile(profile) {
-    const result = { score: 0, flags: [] };
-
-    // New account (less than 30 days)
-    if (profile.accountAge && profile.accountAge < 30) {
-      result.score += 0.3;
-      result.flags.push('New account (< 30 days)');
-    }
-
-    // Low connection count
-    if (profile.connections && profile.connections < 50) {
-      result.score += 0.2;
-      result.flags.push('Low connections (< 50)');
-    }
-
-    // No profile photo or default photo
-    if (!profile.hasPhoto || profile.isDefaultPhoto) {
-      result.score += 0.2;
-      result.flags.push('No profile photo');
-    }
-
-    // No work history
-    if (!profile.hasWorkHistory) {
-      result.score += 0.2;
-      result.flags.push('No work history');
-    }
-
-    // Generic job title
-    const genericTitles = ['recruiter', 'hr specialist', 'talent acquisition', 'career coach'];
-    if (profile.title && genericTitles.some(t => profile.title.toLowerCase().includes(t))) {
-      result.score += 0.1;
-      result.flags.push('Generic recruiter title');
-    }
-
-    return result;
-  }
-
-  /**
-   * Quick check if message contains any scam patterns
-   */
-  quickCheck(messageText) {
-    const text = messageText.toLowerCase();
-    
-    // Check high-priority patterns first
-    const highPriority = [
-      ...this.patterns.paymentRedFlags,
-      ...this.patterns.cvScams.slice(0, 10),
-      ...this.patterns.phishingIndicators
-    ];
-
-    for (const pattern of highPriority) {
-      if (text.includes(pattern.toLowerCase())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Get human-readable category name
-   */
   getCategoryName(category) {
     const names = {
-      cvScams: '📝 CV/Resume Scam',
-      fakeJobOffers: '💼 Fake Job Offer',
-      urgencyTactics: '⏰ Urgency Tactics',
-      paymentRedFlags: '💰 Payment Request',
-      botPatterns: '🤖 Bot Pattern',
-      phishingIndicators: '🎣 Phishing Attempt',
-      spanishPatterns: '🌎 Scam (Spanish)',
-      suspiciousDomains: '🔗 Suspicious Link',
-      profileRedFlags: '👤 Profile Red Flags'
+      RESUME_SCAMS: '📝 CV/Resume Scam',
+      URGENCY_WHATSAPP: '📱 WhatsApp/Urgency',
+      PAYMENT_CRYPTO: '💰 Payment/Crypto'
     };
     return names[category] || category;
   }

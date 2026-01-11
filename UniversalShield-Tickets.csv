@@ -1,0 +1,145 @@
+Ticket ID,Priority,Title,Category,Description,Acceptance Criteria,Technical Details,Dependencies,Estimated Hours,Status,Phase,Component
+SHIELD-001,CRITICAL,Strip Local Detection Logic from Extension,Architecture Realignment,"ARCHITECTURAL FIX: Remove all regex-based detection from extension. The extension must be a THIN CLIENT that only extracts features and displays VPS Agent results. Currently detector.js and scamPatterns.js contain duplicate detection logic that should ONLY exist in the VPS Fraud Agent.","1. Remove detector.js from manifest.json
+2. Remove scamPatterns.js from manifest.json
+3. Update content.js to ONLY use CloudAnalyzer
+4. Remove all local scoring/detection code
+5. Extension sends 100% of features to VPS
+6. Extension displays ONLY VPS Agent verdict","Files to modify:
+- extensions/manifest.json (remove detector.js, scamPatterns.js)
+- extensions/src/content.js (remove detector initialization, local scoring)
+Keep: cloudAnalyzer.js, FeatureExtractor class",None,4,PENDING,Phase 1,Extension
+
+SHIELD-002,CRITICAL,Update content.js to Pure Thin Client,Architecture Realignment,"Refactor content.js to be a pure sensor/display layer. Remove Math.max() combination of local+cloud scores. The VPS Agent verdict is the ONLY authority.","1. Remove 'const detector = new ScamDetector()' line
+2. Remove localAnalysis variable and usage
+3. CloudAnalyzer.analyze() result is the ONLY verdict
+4. Remove all local isScam/isSuspicious logic
+5. Display only what VPS Agent returns","content.js lines 11, 155-165 need refactoring. performCloudAnalysis() should be the ONLY path.",SHIELD-001,3,PENDING,Phase 1,Extension
+
+SHIELD-003,CRITICAL,Enhance VPS FeatureExtractor for Rachel Good Pattern,VPS Agent Enhancement,"Add Rachel Good scam-specific features to the VPS-side feature extraction. Currently these patterns are only in the extension's local detector.","1. Add gmail_recruiter_combo feature (Gmail + Recruiter title)
+2. Add vague_address_pattern feature
+3. Add location_inquiry feature
+4. Add experience_inquiry feature
+5. Add generic_greeting feature
+6. All features are numerical (0-1 scale)","VPS file: src/contextual/feature_extractor.py
+Add features to PrivacyFirstFeatureExtractor class",None,4,PENDING,Phase 2,VPS Agent
+
+SHIELD-004,CRITICAL,Add Financial Phishing Features to VPS,VPS Agent Enhancement,"Add Destiny Mastercard and financial phishing detection features to VPS Agent. Currently only in extension's scamPatterns.js.","1. Add credit_card_mention feature
+2. Add credit_limit_mention feature
+3. Add security_deposit_mention feature
+4. Add mastercard_destiny_combo feature
+5. Update MLService to use these features","VPS file: src/contextual/feature_extractor.py
+Add to feature vector in ml_service.py",SHIELD-003,3,PENDING,Phase 2,VPS Agent
+
+SHIELD-005,HIGH,Implement Persistent Feedback Storage,VPS Agent Enhancement,"The /api/v1/report-scam endpoint only logs data. Must persist to PostgreSQL for ML retraining.","1. Create PostgreSQL table: training_feedback
+2. Store: features JSON, label, timestamp, category
+3. Update report-scam endpoint to INSERT
+4. Add /api/v1/training-data endpoint for batch export
+5. Test persistence","VPS file: src/api/scam_detection_api.py
+New file: src/db/models.py
+Requires: PostgreSQL connection",PostgreSQL,6,PENDING,Phase 2,VPS Agent
+
+SHIELD-006,HIGH,Train XGBoost Model with Real Data,ML Training,"Current MLService has fallback_scoring because model file may not exist. Train real XGBoost model with labeled scam data.","1. Collect 1000+ labeled training samples
+2. Create train_model.py script
+3. Train XGBoost with Rachel Good patterns
+4. Train with financial phishing patterns
+5. Save model to models/scam_detector_v1.pkl
+6. Achieve >95% accuracy on test set","VPS file: src/ml/train_model.py
+Model output: models/scam_detector_v1.pkl",SHIELD-005,8,PENDING,Phase 2,VPS Agent
+
+SHIELD-007,HIGH,Implement Weekly Model Retraining Job,ML Training,"Create scheduled job to retrain XGBoost model with new feedback data from PostgreSQL.","1. Create src/ml/retrain_job.py
+2. Query training_feedback table for new data
+3. Merge with existing training data
+4. Retrain model
+5. Save new model version
+6. Add to cron (weekly Sunday 2am)","Requires: PostgreSQL with training data
+Output: Versioned model files",SHIELD-006,4,PENDING,Phase 3,VPS Agent
+
+SHIELD-008,HIGH,Differentiate Free vs Pro API Response,Monetization,"Free tier should get limited information. Pro gets full explanation and confidence scores.","1. Free tier: risk_score, risk_level only
+2. Pro tier: + explanation, ml_confidence, fraud_ring_detection
+3. Update /api/v1/analyze-features response
+4. Update extension to handle tier differences
+5. Show upgrade prompt for free users","VPS file: src/api/scam_detection_api.py lines 150-158
+Extension: cloudAnalyzer.js response handling",None,3,PENDING,Phase 3,Both
+
+SHIELD-009,MEDIUM,Add Extension Popup with Tier Status,Extension UI,"Create popup.html showing user's tier status, scans remaining (free), and upgrade CTA.","1. Create popup.html with tier display
+2. Show scans remaining for free tier
+3. Add 'Upgrade to Pro' button
+4. Link to payment flow
+5. Show stats (scams blocked, scans today)","Extension files: popup.html, popup.js, popup.css
+manifest.json: add popup configuration",None,4,PENDING,Phase 3,Extension
+
+SHIELD-010,MEDIUM,Implement License Key Management,Monetization,"Extension needs UI for users to enter/manage their Pro license key.","1. Add license key input in popup
+2. Validate key via /api/v1/subscription/validate
+3. Store valid key in chrome.storage
+4. Show tier status after validation
+5. Handle invalid/expired keys","Extension: popup.js, background.js
+VPS: /api/v1/subscription/validate endpoint exists",SHIELD-009,3,PENDING,Phase 3,Extension
+
+SHIELD-011,MEDIUM,Add Payment Flow Integration,Monetization,"Integrate Stripe/PayPal for Pro tier purchase. Generate license keys on successful payment.","1. Create payment landing page
+2. Integrate Stripe checkout
+3. On success: generate US-PRO-{uuid} license key
+4. Store license in PostgreSQL licenses table
+5. Send license key via email
+6. Update VPS licenses dict to query DB","New: payment service
+VPS: Update license validation to use DB",Stripe/PayPal account,8,PENDING,Phase 4,VPS Agent
+
+SHIELD-012,MEDIUM,Add Gmail Platform Detection,Extension Enhancement,"Gmail selectors in content.js need validation. Ensure features include platform_id=2 for Gmail.","1. Test Gmail selectors on actual Gmail
+2. Update FeatureExtractor to detect Gmail platform
+3. Ensure platform_id=2 sent to VPS
+4. VPS uses platform_id in ML prediction","Extension: content.js MESSAGE_SELECTORS
+cloudAnalyzer.js: metadata.platform detection",None,2,PENDING,Phase 2,Extension
+
+SHIELD-013,MEDIUM,Add Outlook Platform Detection,Extension Enhancement,"Outlook selectors in content.js need validation. Ensure features include platform_id=3 for Outlook.","1. Test Outlook selectors on actual Outlook web
+2. Update FeatureExtractor to detect Outlook platform
+3. Ensure platform_id=3 sent to VPS
+4. VPS uses platform_id in ML prediction","Extension: content.js MESSAGE_SELECTORS
+cloudAnalyzer.js: metadata.platform detection",None,2,PENDING,Phase 2,Extension
+
+SHIELD-014,LOW,Add GNN Fraud Ring Detection to VPS,VPS Agent Enhancement,"Implement Graph Neural Network for detecting coordinated scam campaigns (fraud rings).","1. Create src/ml/gnn_service.py
+2. Build sender relationship graph
+3. Detect clusters of coordinated scammers
+4. Add fraud_ring_score to API response
+5. Pro tier only feature","New file: src/ml/gnn_service.py
+Requires: PyTorch Geometric or DGL",SHIELD-006,12,PENDING,Phase 4,VPS Agent
+
+SHIELD-015,LOW,Create Admin Dashboard for Monitoring,Operations,"Dashboard to monitor: API usage, accuracy metrics, feedback volume, tier distribution.","1. Create admin dashboard (React/Next.js)
+2. Show API requests per hour/day
+3. Show accuracy metrics (if available)
+4. Show feedback reports volume
+5. Show free vs pro usage split","New project: universalshield-admin
+Connects to PostgreSQL",SHIELD-005,16,PENDING,Phase 4,Admin
+
+SHIELD-016,LOW,Add Unit Tests for Extension,Testing,"Extension has no tests. Add Jest tests for FeatureExtractor and CloudAnalyzer.","1. Set up Jest in extension
+2. Test FeatureExtractor.extract()
+3. Test CloudAnalyzer.analyze() with mocked API
+4. Test reportScam() function
+5. Achieve >80% coverage","Extension: package.json, jest.config.js
+New: tests/ directory",None,6,PENDING,Phase 4,Extension
+
+SHIELD-017,LOW,Add Integration Tests for VPS API,Testing,"VPS API has minimal tests. Add pytest integration tests for all endpoints.","1. Create tests/integration/test_api.py
+2. Test /api/v1/analyze-features
+3. Test /api/v1/report-scam
+4. Test /api/v1/subscription/validate
+5. Test rate limiting
+6. Achieve >80% coverage","VPS: tests/integration/
+Requires: pytest, httpx",None,6,PENDING,Phase 4,VPS Agent
+
+SHIELD-018,CRITICAL,Document IA-Centric Architecture,Documentation,"Create architecture documentation to prevent future drift. Extension = Sensor, VPS = Brain.","1. Create ARCHITECTURE.md
+2. Document data flow diagram
+3. Document what lives where (extension vs VPS)
+4. Document monetization tiers
+5. Document feedback loop for ML growth","Root: ARCHITECTURE.md
+Diagrams: Mermaid or ASCII",None,2,PENDING,Phase 1,Documentation
+
+SHIELD-019,HIGH,Update Extension Manifest for Production,Extension,"manifest.json needs cleanup: remove detector.js, scamPatterns.js, update permissions.","1. Remove detector.js from content_scripts
+2. Remove scamPatterns.js from content_scripts
+3. Verify cloudAnalyzer.js is included
+4. Update extension name/description
+5. Update permissions to minimum required","Extension: manifest.json",SHIELD-001,1,PENDING,Phase 1,Extension
+
+SHIELD-020,MEDIUM,Add Error Handling for VPS Unavailable,Extension Enhancement,"If api.tucan.store is down, extension should show graceful error, not fail silently.","1. Add timeout to CloudAnalyzer fetch (5 seconds)
+2. Show 'Agent unavailable' badge on timeout
+3. Log error for debugging
+4. Retry logic (3 attempts with backoff)
+5. Never fall back to local detection","Extension: cloudAnalyzer.js
+Update error handling in analyze()",None,2,PENDING,Phase 2,Extension

@@ -79,7 +79,18 @@ class MLService:
             features.get('requests_download', 0),
             features.get('requests_payment', 0),
             features.get('requests_credentials', 0),
-            features.get('has_urgency', 0)
+            features.get('has_urgency', 0),
+            # Rachel Good scam pattern features
+            features.get('recruiter_keywords_count', 0),
+            features.get('location_inquiry', 0),
+            features.get('experience_inquiry', 0),
+            features.get('gmail_recruiter_combo', 0),
+            features.get('vague_address_pattern', 0),
+            # Financial phishing features
+            features.get('financial_phishing_keywords_count', 0),
+            features.get('credit_card_mention', 0),
+            features.get('credit_limit_mention', 0),
+            features.get('security_deposit_mention', 0)
         ])
     
     def _fallback_scoring(self, features: Dict) -> float:
@@ -97,5 +108,19 @@ class MLService:
             risk += 0.2
         if features.get('urgency_keywords_count', 0) > 3:
             risk += 0.15
+        
+        # Rachel Good pattern scoring
+        if features.get('gmail_recruiter_combo', 0):
+            risk += 0.4  # High risk: Gmail + Recruiter combo
+        if features.get('vague_address_pattern', 0):
+            risk += 0.15
+        if features.get('location_inquiry', 0) and features.get('experience_inquiry', 0):
+            risk += 0.1  # Both inquiries present
+        
+        # Financial phishing scoring
+        if features.get('financial_phishing_keywords_count', 0) > 2:
+            risk += 0.35  # Multiple financial phishing keywords
+        if features.get('credit_card_mention', 0) and features.get('security_deposit_mention', 0):
+            risk += 0.3  # Destiny Mastercard pattern
         
         return min(risk, 1.0)

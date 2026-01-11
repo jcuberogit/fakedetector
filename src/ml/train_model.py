@@ -11,16 +11,85 @@ from sklearn.metrics import classification_report, confusion_matrix, precision_r
 from xgboost import XGBClassifier
 import joblib
 import sys
+from datetime import datetime
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.contextual.feature_extractor import PrivacyFirstFeatureExtractor
+from src.db.database import DatabaseService
 
 
-def load_dataset():
-    """Load scam examples and extract features."""
+def load_dataset_from_db(db: DatabaseService, limit: int = 10000):
+    """Load training data from database (user feedback)."""
+    print("\n📥 Loading training data from database...")
+    
+    reports = db.get_training_data(limit=limit, unused_only=False)
+    
+    if not reports:
+        print("⚠️  No training data found in database")
+        return None, None, None
+    
+    X = []
+    y = []
+    
+    for report in reports:
+        features = report['features']
+        
+        # Convert to feature vector (34 features now)
+        feature_vector = [
+            features.get('message_length', 0),
+            features.get('word_count', 0),
+            features.get('sentence_count', 1),
+            features.get('avg_word_length', 5.0),
+            features.get('urgency_keywords_count', 0),
+            features.get('money_keywords_count', 0),
+            features.get('credential_keywords_count', 0),
+            features.get('link_count', 0),
+            features.get('has_shortened_url', 0),
+            features.get('file_attachment', 0),
+            features.get('file_extension_risk', 0.0),
+            features.get('exclamation_count', 0),
+            features.get('question_count', 0),
+            features.get('caps_ratio', 0.0),
+            features.get('number_count', 0),
+            features.get('currency_symbol_count', 0),
+            features.get('sender_account_age_days', 365),
+            features.get('connection_degree', 3),
+            features.get('previous_interactions', 0),
+            features.get('platform_id', 0),
+            features.get('context_type_id', 0),
+            features.get('requests_download', 0),
+            features.get('requests_payment', 0),
+            features.get('requests_credentials', 0),
+            features.get('has_urgency', 0),
+            # Rachel Good pattern features
+            features.get('recruiter_keywords_count', 0),
+            features.get('location_inquiry', 0),
+            features.get('experience_inquiry', 0),
+            features.get('gmail_recruiter_combo', 0),
+            features.get('vague_address_pattern', 0),
+            # Financial phishing features
+            features.get('financial_phishing_keywords_count', 0),
+            features.get('credit_card_mention', 0),
+            features.get('credit_limit_mention', 0),
+            features.get('security_deposit_mention', 0)
+        ]
+        
+        X.append(feature_vector)
+        y.append(1 if report['is_scam'] else 0)
+    
+    print(f"✅ Loaded {len(reports)} labeled samples from database")
+    return np.array(X), np.array(y), reports
+
+
+def load_dataset_from_json():
+    """Load scam examples from JSON file (fallback/initial training)."""
     data_path = Path(__file__).parent.parent.parent / 'data' / 'scam_examples.json'
+    
+    if not data_path.exists():
+        print(f"⚠️  No JSON dataset found at {data_path}")
+        return None, None, None
     
     with open(data_path, 'r') as f:
         examples = json.load(f)
@@ -34,7 +103,7 @@ def load_dataset():
         # Extract anonymized features
         features = extractor.extract_features(example['message'], example['metadata'])
         
-        # Convert to feature vector
+        # Convert to feature vector (34 features)
         feature_vector = [
             features['message_length'],
             features['word_count'],
@@ -60,7 +129,18 @@ def load_dataset():
             features['requests_download'],
             features['requests_payment'],
             features['requests_credentials'],
-            features['has_urgency']
+            features['has_urgency'],
+            # Rachel Good pattern features
+            features['recruiter_keywords_count'],
+            features['location_inquiry'],
+            features['experience_inquiry'],
+            features['gmail_recruiter_combo'],
+            features['vague_address_pattern'],
+            # Financial phishing features
+            features['financial_phishing_keywords_count'],
+            features['credit_card_mention'],
+            features['credit_limit_mention'],
+            features['security_deposit_mention']
         ]
         
         X.append(feature_vector)
@@ -134,7 +214,13 @@ def train_model(X, y):
         'question_count', 'caps_ratio', 'number_count', 'currency_symbol_count',
         'sender_account_age', 'connection_degree', 'previous_interactions',
         'platform_id', 'context_type_id', 'requests_download', 'requests_payment',
-        'requests_credentials', 'has_urgency'
+        'requests_credentials', 'has_urgency',
+        # Rachel Good features
+        'recruiter_keywords', 'location_inquiry', 'experience_inquiry',
+        'gmail_recruiter_combo', 'vague_address_pattern',
+        # Financial phishing features
+        'financial_phishing_keywords', 'credit_card_mention', 'credit_limit_mention',
+        'security_deposit_mention'
     ]
     
     importances = model.feature_importances_
@@ -160,17 +246,59 @@ def save_model(model):
 
 def main():
     """Main training pipeline."""
-    # Load data
-    print("Loading dataset...")
-    X, y, examples = load_dataset()
+    # Initialize database
+    db = DatabaseService()
     
-    print(f"Loaded {len(examples)} examples ({sum(y)} scams, {len(y)-sum(y)} safe)")
+    # Load data (try database first, fallback to JSON)
+    print("Loading dataset...")
+    X, y, data_source = load_dataset_from_db(db, limit=10000)
+    
+    if X is None:
+        print("\n⚠️  No database data, trying JSON file...")
+        X, y, data_source = load_dataset_from_json()
+    
+    if X is None or len(X) == 0:
+        print("\n❌ ERROR: No training data available")
+        print("   Please either:")
+        print("   1. Add scam reports via /api/v1/report-scam endpoint")
+        print("   2. Create data/scam_examples.json with labeled examples")
+        return 1
+    
+    print(f"\nLoaded {len(X)} examples ({sum(y)} scams, {len(y)-sum(y)} safe)")
+    print(f"Feature count: {X.shape[1]} (expected: 34)")
     
     # Train model
     model, precision, recall, f1 = train_model(X, y)
     
     # Save model
     model_path = save_model(model)
+    
+    # Save model version to database
+    version = f"v{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    metrics = {
+        'accuracy': (precision + recall) / 2,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1
+    }
+    
+    model_id = db.save_model_version(
+        version=version,
+        model_type='xgboost',
+        training_samples=len(X),
+        metrics=metrics,
+        model_path=str(model_path),
+        feature_count=X.shape[1]
+    )
+    
+    if model_id:
+        print(f"\n💾 Model version saved to database: {version} (ID: {model_id})")
+        
+        # Optionally set as active
+        user_input = input("\nSet this model as active? (y/n): ")
+        if user_input.lower() == 'y':
+            db.set_active_model(model_id)
+            print(f"✅ Model {version} is now active")
     
     # Final assessment
     print("\n" + "="*60)
@@ -186,6 +314,7 @@ def main():
         print(f"   Recall: {recall:.1%} (target: ≥80%)")
     print("="*60 + "\n")
     
+    db.close()
     return 0 if target_met else 1
 
 

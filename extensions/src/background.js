@@ -1,6 +1,5 @@
 /**
  * UniversalShield - Background Service Worker
- * 100% Open Source - MIT License
  */
 
 // Initialize stats on install
