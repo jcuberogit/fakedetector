@@ -1,17 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "UniversalShield",
+  "name": "JobGuard AI",
   "version": "1.0.0",
-  "description": "🛡️ Detect and protect against CV improvement scams and bot attacks on LinkedIn.",
+  "description": "🛡️ AI-powered protection against job scams, fake recruiters, and phishing attacks on LinkedIn.",
   "author": "Paradigm",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://mail.google.com/*",
-    "https://outlook.live.com/*",
-    "https://outlook.office.com/*",
     "https://api.tucan.store/*"
   ],
   "action": {
@@ -30,10 +27,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.linkedin.com/*",
-        "https://mail.google.com/*",
-        "https://outlook.live.com/*",
-        "https://outlook.office.com/*"
+        "https://www.linkedin.com/*"
       ],
       "js": ["src/cloudAnalyzer.js", "src/content.js"],
       "css": ["src/styles.css"],

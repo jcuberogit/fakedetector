@@ -1,16 +1,16 @@
 /**
- * UniversalShield - Content Script
+ * JobGuard AI - Content Script
  * 
- * This script runs on LinkedIn pages and scans messages for scams
+ * LinkedIn-only protection against job scams and fake recruiters
  */
 
-console.log('🛡️ UniversalShield content.js loading...');
+console.log('🛡️ JobGuard AI content.js loading...');
 
 (function() {
   'use strict';
 
   try {
-    console.log('🛡️ UniversalShield IIFE started');
+    console.log('🛡️ JobGuard AI initialized for LinkedIn');
   
   // Note: LinkedIn generates spam errors (chrome-extension://invalid) - these are from LinkedIn's code, not ours
 
@@ -40,25 +40,13 @@ console.log('🛡️ UniversalShield content.js loading...');
     }
   });
 
-  // Selectors prioritized for Rachel Good and Cross-Platform (LinkedIn, Gmail, Outlook)
+  // LinkedIn-only message selectors
   const MESSAGE_SELECTORS = [
-    // LinkedIn
     '.msg-s-event-listitem__body', 
     '.msg-s-event-listitem__message-bubble',
     '.msg-s-event__content',
     '.msg-s-message-group__content',
-    '.feed-shared-text', 
-    
-    // Gmail
-    '.a3s.aiL', // Message body
-    '.ii.gt',    // Inner message content
-    'div[role="main"] .adn.ads',
-    
-    // Outlook
-    '.rps_2492', // Outlook message body
-    '[aria-label="Message body"]',
-    
-    // Generic/Common
+    '.feed-shared-text',
     'div[role="main"] .update-components-text'
   ];
 
@@ -69,7 +57,7 @@ console.log('🛡️ UniversalShield content.js loading...');
     const badge = document.createElement('div');
     badge.className = 'scamshield-badge shield-badge';
     
-    const badgeText = result.isScam ? '⚠️ UNIVERSAL SHIELD: BOT DETECTED' : '⚠️ UNIVERSAL SHIELD: SUSPICIOUS';
+    const badgeText = result.isScam ? '⚠️ JOBGUARD AI: SCAM DETECTED' : '⚠️ JOBGUARD AI: SUSPICIOUS';
     const bgColor = result.isScam ? '#ff0000' : '#ffcc00';
 
     const badgeInner = document.createElement('div');
