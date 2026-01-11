@@ -507,21 +507,16 @@ class CloudAnalyzer {
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const response = await fetch(fullUrl, {
+        // Use background script to bypass LinkedIn's CSP
+        const result = await this.apiCallViaBackground(fullUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-License-Key': this.licenseKey || ''
           },
-          body: JSON.stringify({ features }),
-          signal: AbortSignal.timeout(10000) // 10 second timeout
+          body: JSON.stringify({ features })
         });
         
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-        
-        const result = await response.json();
         console.log('🛡️ [ANALYZE] API Response:', JSON.stringify(result));
         console.log('🛡️ [ANALYZE] Risk score:', result.risk_score, 'Risk level:', result.risk_level);
         
@@ -556,26 +551,36 @@ class CloudAnalyzer {
   async verifyUrls(urls) {
     // FREE Layer 1: Check URLs against PhishTank/Google Safe Browsing
     try {
-      const response = await fetch(`${this.apiUrl}/api/v1/verify-urls`, {
+      return await this.apiCallViaBackground(`${this.apiUrl}/api/v1/verify-urls`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-License-Key': this.licenseKey || ''
         },
-        body: JSON.stringify({ urls }),
-        signal: AbortSignal.timeout(5000) // 5 second timeout for URL check
+        body: JSON.stringify({ urls })
       });
-      
-      if (!response.ok) {
-        console.warn('URL verification failed:', response.status);
-        return null;
-      }
-      
-      return await response.json();
     } catch (error) {
       console.warn('URL verification error:', error.message);
       return null; // Continue to next layer if URL check fails
     }
+  }
+  
+  // Route API calls through background script to bypass LinkedIn's CSP
+  async apiCallViaBackground(url, options) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { type: 'API_CALL', url, options },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (response && response.success) {
+            resolve(response.data);
+          } else {
+            reject(new Error(response?.error || 'API call failed'));
+          }
+        }
+      );
+    });
   }
 }
 

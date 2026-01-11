@@ -50,7 +50,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({ scamshield_settings: message.data });
     sendResponse({ success: true });
   }
+  
+  // API call from content script - bypasses LinkedIn's CSP
+  if (message.type === 'API_CALL') {
+    handleApiCall(message.url, message.options)
+      .then(result => sendResponse({ success: true, data: result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true; // Keep channel open for async response
+  }
 });
+
+/**
+ * Handle API calls from content script (bypasses page CSP)
+ */
+async function handleApiCall(url, options) {
+  console.log('🛡️ [BG] API call to:', url);
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return await response.json();
+}
 
 /**
  * Handle scam report from user
