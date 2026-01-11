@@ -501,10 +501,13 @@ class CloudAnalyzer {
     // Step 2: Send ONLY features to API with retry logic
     const maxRetries = 2;
     let lastError;
+    const fullUrl = `${this.apiUrl}/api/v1/analyze-features`;
+    console.log('🛡️ [API] Calling URL:', fullUrl);
+    console.log('🛡️ [API] With features:', JSON.stringify(features));
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const response = await fetch(`${this.apiUrl}/api/v1/analyze-features`, {
+        const response = await fetch(fullUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
