@@ -316,8 +316,14 @@ console.log('🛡️ JobGuard AI content.js loading...');
       console.error('🛡️ Error name:', error.name);
       console.error('🛡️ Error message:', error.message);
       console.error('🛡️ Error stack:', error.stack);
+      
+      let displayError = 'Agent unavailable - check connection';
+      if (error.message.includes('429')) {
+        displayError = 'Daily limit reached - Upgrade for unlimited';
+      }
+      
       // Show error badge instead of falling back to local detection
-      showErrorBadge(messageElement, 'Agent unavailable - check connection');
+      showErrorBadge(messageElement, displayError);
     }
   }
 

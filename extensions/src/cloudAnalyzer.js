@@ -532,8 +532,8 @@ class CloudAnalyzer {
         lastError = error;
         console.warn(`Cloud analysis attempt ${attempt + 1} failed:`, error.message);
         
-        // Don't retry on 4xx errors (client errors)
-        if (error.message.includes('40')) {
+        // Don't retry on 4xx errors (client errors) including 429
+        if (error.message.includes('40') || error.message.includes('429')) {
           break;
         }
         
