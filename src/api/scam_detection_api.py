@@ -16,6 +16,8 @@ from src.ml.ml_service import MLService
 from src.db.database import DatabaseService
 from src.api.payment_api import router as payment_router
 from src.api.admin_api import router as admin_router
+from src.api.threat_intel_service import threat_intel, verify_message_urls
+import asyncio
 
 app = FastAPI(title="UniversalShield API", version="1.0.0")
 
@@ -230,6 +232,51 @@ async def analyze_features(
             "tier": tier,
             "scans_remaining": FREE_TIER_LIMIT - len(rate_limits.get(api_key, [])) if tier == "free" else None
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class URLVerifyRequest(BaseModel):
+    urls: list  # List of URLs to verify
+
+@app.post("/api/v1/verify-urls")
+async def verify_urls(
+    request: URLVerifyRequest,
+    x_license_key: Optional[str] = Header(None)
+):
+    """
+    FREE Layer 1: Verify URLs against PhishTank and Google Safe Browsing.
+    This is called BEFORE AI analysis to save costs.
+    """
+    try:
+        results = []
+        for url in request.urls[:10]:  # Limit to 10 URLs per request
+            result = await threat_intel.verify_url(url)
+            results.append(result)
+        
+        malicious_count = sum(1 for r in results if r['is_malicious'])
+        
+        return {
+            "url_count": len(results),
+            "malicious_count": malicious_count,
+            "has_threats": malicious_count > 0,
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/verify-domain")
+async def verify_domain(
+    domain: str,
+    x_license_key: Optional[str] = Header(None)
+):
+    """
+    FREE Layer 2: Check domain reputation (typosquatting, suspicious TLDs).
+    """
+    try:
+        result = await threat_intel._check_domain_reputation(domain)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

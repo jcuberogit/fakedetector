@@ -308,8 +308,42 @@ class FeatureExtractor {
   }
   
   hasShortenedUrl(message) {
-    const shorteners = ['bit.ly', 'tinyurl', 'goo.gl', 't.co', 'ow.ly'];
+    const shorteners = ['bit.ly', 'tinyurl', 'goo.gl', 't.co', 'ow.ly', 'is.gd', 'buff.ly', 'adf.ly'];
     return shorteners.some(s => message.toLowerCase().includes(s));
+  }
+  
+  extractUrls(message) {
+    // Extract all URLs from message for threat intelligence verification
+    const urlPattern = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+    const urls = message.match(urlPattern) || [];
+    
+    // Also extract URL shorteners
+    const shortenerPatterns = [
+      /bit\.ly\/\S+/gi, /tinyurl\.com\/\S+/gi, /goo\.gl\/\S+/gi,
+      /t\.co\/\S+/gi, /ow\.ly\/\S+/gi, /is\.gd\/\S+/gi
+    ];
+    
+    shortenerPatterns.forEach(pattern => {
+      const matches = message.match(pattern) || [];
+      matches.forEach(m => {
+        if (!m.startsWith('http')) {
+          urls.push('https://' + m);
+        }
+      });
+    });
+    
+    return [...new Set(urls)]; // Remove duplicates
+  }
+  
+  extractEmailDomains(message) {
+    // Extract email domains for verification
+    const emailPattern = /[\w.-]+@([\w.-]+\.\w+)/gi;
+    const domains = [];
+    let match;
+    while ((match = emailPattern.exec(message)) !== null) {
+      domains.push(match[1].toLowerCase());
+    }
+    return [...new Set(domains)];
   }
   
   getExtensionRisk(fileType) {
@@ -432,14 +466,37 @@ class CloudAnalyzer {
   }
   
   async analyze(message, metadata) {
-    // Step 1: Extract anonymized features LOCALLY
-    console.log('🛡️ [ANALYZE] Message first 200 chars:', message.substring(0, 200));
-    console.log('🛡️ [ANALYZE] CV scam keywords list:', this.featureExtractor.cvScamKeywords);
+    // ============ LAYERED VERIFICATION (Cost Optimization) ============
+    // Layer 1: FREE - PhishTank/Google Safe Browsing (URL blacklist)
+    // Layer 2: FREE - Local NLP patterns (Cialdini, CISA)
+    // Layer 3: PAID - AI analysis only if needed
     
+    console.log('🛡️ [ANALYZE] Starting layered verification...');
+    
+    // Step 0: Extract URLs for FREE threat intel check
+    const urls = this.featureExtractor.extractUrls(message);
+    if (urls.length > 0) {
+      console.log('🛡️ [LAYER 1] Found URLs, checking threat intel:', urls);
+      const urlResult = await this.verifyUrls(urls);
+      if (urlResult && urlResult.has_threats) {
+        console.log('🛡️ [LAYER 1] MALICIOUS URL DETECTED!', urlResult);
+        return {
+          risk_score: 100,
+          risk_level: 'critical',
+          explanation: '🚨 MALICIOUS URL DETECTED: URL found in PhishTank/Google Safe Browsing blacklist. Do NOT click any links in this message.',
+          source: 'threat_intel',
+          tier: 'free',
+          threat_details: urlResult.results
+        };
+      }
+    }
+    
+    // Step 1: Extract anonymized features LOCALLY (FREE)
+    console.log('🛡️ [LAYER 2] Local NLP analysis...');
     const features = this.featureExtractor.extract(message, metadata);
     console.log('🛡️ [ANALYZE] Features extracted:', JSON.stringify(features));
     console.log('🛡️ [ANALYZE] CV scam count:', features.cv_scam_keywords_count);
-    console.log('🛡️ [ANALYZE] Urgency count:', features.urgency_keywords_count);
+    console.log('🛡️ [ANALYZE] Psych attack total:', features.psych_attack_total);
     
     // Step 2: Send ONLY features to API with retry logic
     const maxRetries = 2;
@@ -491,6 +548,31 @@ class CloudAnalyzer {
     
     console.error('Cloud analysis failed after retries:', lastError);
     throw lastError;
+  }
+  
+  async verifyUrls(urls) {
+    // FREE Layer 1: Check URLs against PhishTank/Google Safe Browsing
+    try {
+      const response = await fetch(`${this.apiUrl}/api/v1/verify-urls`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-License-Key': this.licenseKey || ''
+        },
+        body: JSON.stringify({ urls }),
+        signal: AbortSignal.timeout(5000) // 5 second timeout for URL check
+      });
+      
+      if (!response.ok) {
+        console.warn('URL verification failed:', response.status);
+        return null;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.warn('URL verification error:', error.message);
+      return null; // Continue to next layer if URL check fails
+    }
   }
 }
 
