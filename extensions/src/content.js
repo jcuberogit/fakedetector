@@ -22,7 +22,7 @@ console.log('🛡️ JobGuard AI content.js loading...');
   chrome.storage.local.get(['scamshield_license'], (result) => {
     licenseKey = result.scamshield_license || 'US-PRO-DEMO12345678';
     if (typeof CloudAnalyzer !== 'undefined') {
-      cloudAnalyzer = new CloudAnalyzer('https://api.tucan.store', licenseKey);
+      cloudAnalyzer = new CloudAnalyzer('https://jobguard.nomadahealth.com', licenseKey);
     }
   });
   
@@ -448,7 +448,7 @@ console.log('🛡️ JobGuard AI content.js loading...');
 
     // 2. Send to VPS Agent for ML growth
     try {
-      const apiUrl = 'https://api.tucan.store';
+      const apiUrl = 'https://jobguard.nomadahealth.com';
       const response = await fetch(`${apiUrl}/api/v1/report-scam`, {
         method: 'POST',
         headers: {

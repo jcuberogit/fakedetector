@@ -9,7 +9,7 @@
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://api.tucan.store/*"
+    "https://jobguard.nomadahealth.com/*"
   ],
   "action": {
     "default_popup": "popup/popup.html",

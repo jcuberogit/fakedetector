@@ -41,7 +41,7 @@ function setupEventListeners() {
   const upgradeBtn = document.getElementById('upgradeBtn');
   if (upgradeBtn) {
     upgradeBtn.addEventListener('click', () => {
-      chrome.tabs.create({ url: 'https://universalshield.dev/upgrade' });
+      chrome.tabs.create({ url: 'https://jobguard.nomadahealth.com/upgrade' });
     });
     
     // Right-click to show license input
@@ -112,7 +112,7 @@ async function checkLicense() {
   }
   
   try {
-    const response = await fetch('https://api.tucan.store/api/v1/subscription/validate', {
+    const response = await fetch('https://jobguard.nomadahealth.com/api/v1/subscription/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ license_key: stored.scamshield_license })

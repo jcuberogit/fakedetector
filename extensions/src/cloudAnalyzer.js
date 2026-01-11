@@ -460,7 +460,7 @@ class FeatureExtractor {
 
 class CloudAnalyzer {
   constructor(apiUrl, licenseKey) {
-    this.apiUrl = apiUrl || 'https://api.tucan.store';
+    this.apiUrl = apiUrl || 'https://jobguard.nomadahealth.com';
     this.licenseKey = licenseKey;
     this.featureExtractor = new FeatureExtractor();
   }
