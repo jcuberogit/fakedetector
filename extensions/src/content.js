@@ -89,7 +89,7 @@ console.log('🛡️ JobGuard AI content.js loading...');
     
     const header = document.createElement('div');
     header.className = 'scamshield-tooltip-header';
-    header.textContent = '🛡️ UniversalShield Agent Analysis';
+    header.textContent = '🛡️ JobGuard AI Analysis';
     
     const closeBtn = document.createElement('button');
     closeBtn.className = 'scamshield-close-btn';
