@@ -52,7 +52,7 @@ if schema_path.exists():
 
 # Rate limiting storage (in-memory for now, use Redis in production)
 rate_limits = defaultdict(list)
-FREE_TIER_LIMIT = 200  # Increased for testing
+FREE_TIER_LIMIT = 1  # 1 scan/day free - proves value, encourages upgrade
 RATE_LIMIT_WINDOW = 86400  # 24 hours in seconds
 
 

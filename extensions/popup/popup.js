@@ -93,10 +93,10 @@ async function loadLicenseStatus() {
     tierBadge.style.background = '#f5f5f5';
     tierBadge.style.color = '#666';
     
-    const remaining = license.scans_remaining || 50;
+    const remaining = license.scans_remaining || 1;
     scansRemaining.textContent = `${remaining} scans remaining today`;
     
-    if (remaining < 10) {
+    if (remaining < 1) {
       scansRemaining.style.color = '#f44336';
     }
     
@@ -108,7 +108,7 @@ async function checkLicense() {
   const stored = await chrome.storage.sync.get(['scamshield_license']);
   
   if (!stored.scamshield_license) {
-    return { valid: false, tier: 'free', scans_remaining: 50 };
+    return { valid: false, tier: 'free', scans_remaining: 1 };
   }
   
   try {
@@ -122,7 +122,7 @@ async function checkLicense() {
     return data;
   } catch (error) {
     console.error('License validation error:', error);
-    return { valid: false, tier: 'free', scans_remaining: 50 };
+    return { valid: false, tier: 'free', scans_remaining: 1 };
   }
 }
 
