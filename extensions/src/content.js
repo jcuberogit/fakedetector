@@ -17,12 +17,41 @@ console.log('🛡️ JobGuard AI content.js loading...');
   // Initialize cloud analyzer (VPS Agent is sole authority)
   let cloudAnalyzer = null;
   let licenseKey = null;
+  
+  // Settings from popup
+  let settings = {
+    enabled: true,
+    showBadges: true
+  };
 
-  // Initialize CloudAnalyzer if available
-  chrome.storage.local.get(['scamshield_license'], (result) => {
+  // Load settings and license
+  chrome.storage.local.get(['scamshield_license', 'scamshield_settings'], (result) => {
     licenseKey = result.scamshield_license || 'US-PRO-DEMO12345678';
+    if (result.scamshield_settings) {
+      settings = result.scamshield_settings;
+    }
     if (typeof CloudAnalyzer !== 'undefined') {
       cloudAnalyzer = new CloudAnalyzer('https://jobguard.nomadahealth.com', licenseKey);
+    }
+    console.log('🛡️ JobGuard AI settings loaded:', settings);
+  });
+  
+  // Listen for settings changes from popup
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.scamshield_settings) {
+      settings = changes.scamshield_settings.newValue;
+      console.log('🛡️ JobGuard AI settings updated:', settings);
+      
+      // If badges disabled, remove existing badges
+      if (!settings.showBadges) {
+        document.querySelectorAll('.scamshield-badge, .shield-badge').forEach(badge => {
+          badge.style.display = 'none';
+        });
+      } else {
+        document.querySelectorAll('.scamshield-badge, .shield-badge').forEach(badge => {
+          badge.style.display = '';
+        });
+      }
     }
   });
   
@@ -182,6 +211,12 @@ console.log('🛡️ JobGuard AI content.js loading...');
    * Scan a message element
    */
   function scanMessage(messageElement) {
+    // Check if protection is enabled
+    if (!settings.enabled) {
+      console.log('🛡️ Protection disabled, skipping scan');
+      return;
+    }
+    
     console.log('🛡️ scanMessage called for element:', messageElement);
     
     // CRITICAL: Mark immediately to prevent race conditions
@@ -290,6 +325,12 @@ console.log('🛡️ JobGuard AI content.js loading...');
    * Show error badge when VPS Agent is unavailable
    */
   function showErrorBadge(messageElement, errorMessage) {
+    // Check if badges are enabled
+    if (!settings.showBadges) {
+      console.log('🛡️ Badges disabled, not showing error badge');
+      return;
+    }
+    
     const badge = document.createElement('div');
     badge.className = 'scamshield-badge shield-badge';
     
@@ -323,6 +364,12 @@ console.log('🛡️ JobGuard AI content.js loading...');
       riskLevel: analysis.riskLevel,
       riskScore: analysis.riskScore
     });
+    
+    // Check if badges are enabled
+    if (!settings.showBadges) {
+      console.log('🛡️ Badges disabled, not showing warning badge');
+      return;
+    }
     
     // If suspicious or scam, add badge
     if (analysis.isScam || analysis.isSuspicious) {
