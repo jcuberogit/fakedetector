@@ -65,12 +65,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  */
 async function handleApiCall(url, options) {
   console.log('🛡️ [BG] API call to:', url);
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      // Return a structured error so content script can handle it
+      return { 
+        error: true, 
+        status: response.status, 
+        message: `API error: ${response.status}` 
+      };
+    }
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    return { 
+      error: true, 
+      status: 0, 
+      message: error.message 
+    };
   }
-  return await response.json();
 }
+
+// Update the listener to handle the new return structure
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'API_CALL') {
+    handleApiCall(message.url, message.options)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ error: true, message: error.message }));
+    return true; 
+  }
+  // ... rest of listeners
+});
 
 /**
  * Handle scam report from user

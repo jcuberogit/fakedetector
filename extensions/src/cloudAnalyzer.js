@@ -575,8 +575,13 @@ class CloudAnalyzer {
             reject(new Error(chrome.runtime.lastError.message));
           } else if (response && response.success) {
             resolve(response.data);
+          } else if (response && response.error) {
+            // Create an error object that includes the status code
+            const err = new Error(response.message || 'API call failed');
+            err.status = response.status;
+            reject(err);
           } else {
-            reject(new Error(response?.error || 'API call failed'));
+            reject(new Error('API call failed: Unknown error'));
           }
         }
       );
