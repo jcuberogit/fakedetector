@@ -145,6 +145,37 @@ class DatabaseService:
         except Exception as e:
             print(f"❌ License deactivation error: {e}")
     
+    def create_license_paypal(self, license_key: str, subscription_id: str, 
+                              tier: str = 'pro', payment_provider: str = 'paypal') -> bool:
+        """Create a license from PayPal subscription."""
+        if not self.conn:
+            # Store in memory fallback
+            if not hasattr(self, '_memory_licenses'):
+                self._memory_licenses = {}
+            self._memory_licenses[license_key] = {
+                'subscription_id': subscription_id,
+                'tier': tier,
+                'payment_provider': payment_provider,
+                'active': True
+            }
+            print(f"✅ Created PayPal license (memory): {license_key}")
+            return True
+        
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO licenses (license_key, tier, subscription_id, payment_provider, active)
+                    VALUES (%s, %s, %s, %s, TRUE)
+                    ON CONFLICT (license_key) DO NOTHING
+                """, (license_key, tier, subscription_id, payment_provider))
+                self.conn.commit()
+            
+            print(f"✅ Created PayPal license: {license_key}")
+            return True
+        except Exception as e:
+            print(f"❌ PayPal license creation error: {e}")
+            return False
+    
     # Scam Reports (ML Training Data)
     
     def save_scam_report(self, features: Dict, predicted_risk_score: float, 

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upgrade to JobGuard AI Pro</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #0077B5 0%, #00A0DC 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0077B5 0%, #00A0DC 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    .plan {
+      padding: 40px;
+      text-align: center;
+    }
+
+    .plan-price {
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: #0077B5;
+      margin-bottom: 5px;
+    }
+
+    .plan-price span {
+      font-size: 1.2rem;
+      color: #666;
+    }
+
+    .plan-interval {
+      color: #999;
+      margin-bottom: 30px;
+    }
+
+    .features {
+      list-style: none;
+      margin: 20px 0;
+      text-align: left;
+    }
+
+    .features li {
+      padding: 12px 0;
+      color: #555;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .features li:last-child {
+      border-bottom: none;
+    }
+
+    .features li::before {
+      content: "✅";
+      margin-right: 12px;
+      font-size: 1.2rem;
+    }
+
+    .paypal-container {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 10px;
+    }
+
+    .paypal-container p {
+      margin-bottom: 15px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    #paypal-button-container {
+      min-height: 45px;
+    }
+
+    .license-section {
+      background: #f5f5f5;
+      padding: 30px 40px;
+      text-align: center;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .license-section h3 {
+      margin-bottom: 15px;
+      color: #333;
+      font-size: 1rem;
+    }
+
+    .license-input {
+      display: flex;
+      gap: 10px;
+    }
+
+    .license-input input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .license-input button {
+      background: #0077B5;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .license-input button:hover {
+      background: #005885;
+    }
+
+    .message {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .guarantee {
+      text-align: center;
+      padding: 20px 40px 30px;
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    .guarantee strong {
+      color: #333;
+    }
+
+    .free-tier-info {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      color: #1565c0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛡️ JobGuard AI Pro</h1>
+      <p>Advanced AI protection against LinkedIn job scams</p>
+    </div>
+
+    <div class="plan">
+      <div class="free-tier-info">
+        🎁 <strong>Free tier:</strong> 50 scans/day included. Upgrade for unlimited protection.
+      </div>
+
+      <div class="plan-price">$4.99<span>/mo</span></div>
+      <div class="plan-interval">Cancel anytime</div>
+      
+      <ul class="features">
+        <li>Unlimited message scans</li>
+        <li>Advanced AI scam detection</li>
+        <li>Cialdini psychological attack detection</li>
+        <li>Real-time URL threat verification</li>
+        <li>Priority support</li>
+      </ul>
+
+      <div class="paypal-container">
+        <p>🔒 Secure payment via PayPal</p>
+        <div id="paypal-button-container"></div>
+      </div>
+    </div>
+
+    <div class="guarantee">
+      <strong>30-day money-back guarantee.</strong> If you're not satisfied, we'll refund you - no questions asked.
+    </div>
+
+    <div class="license-section">
+      <h3>Already have a license key?</h3>
+      <div class="license-input">
+        <input type="text" id="licenseKey" placeholder="Enter your license key">
+        <button onclick="activateLicense()">Activate</button>
+      </div>
+      <div class="message success-message" id="successMessage"></div>
+      <div class="message error-message" id="errorMessage"></div>
+    </div>
+  </div>
+
+  <!-- PayPal SDK -->
+  <script src="https://www.paypal.com/sdk/js?client-id=AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+  
+  <script>
+    const API_URL = 'https://jobguard.nomadahealth.com';
+    
+    // PayPal Subscription Button
+    paypal.Buttons({
+      style: {
+        shape: 'rect',
+        color: 'blue',
+        layout: 'vertical',
+        label: 'subscribe'
+      },
+      createSubscription: function(data, actions) {
+        return actions.subscription.create({
+          'plan_id': 'P-JOBGUARD-MONTHLY-499' // Will create this plan in PayPal
+        });
+      },
+      onApprove: async function(data, actions) {
+        console.log('Subscription approved:', data.subscriptionID);
+        
+        // Send to our API to generate license key
+        try {
+          const response = await fetch(`${API_URL}/api/v1/payment/paypal-subscription`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscription_id: data.subscriptionID,
+              plan: 'pro_monthly'
+            })
+          });
+          
+          const result = await response.json();
+          
+          if (result.success && result.license_key) {
+            document.getElementById('licenseKey').value = result.license_key;
+            showSuccess(`🎉 Payment successful! Your license key: ${result.license_key}`);
+            
+            // Try to save to extension
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+              chrome.storage.sync.set({ scamshield_license: result.license_key });
+            }
+          } else {
+            showError('Payment received but license generation failed. Contact support.');
+          }
+        } catch (error) {
+          showError('Error processing subscription. Please contact support with ID: ' + data.subscriptionID);
+        }
+      },
+      onError: function(err) {
+        console.error('PayPal error:', err);
+        showError('Payment failed. Please try again.');
+      }
+    }).render('#paypal-button-container');
+
+    async function activateLicense() {
+      const licenseKey = document.getElementById('licenseKey').value.trim();
+      hideMessages();
+
+      if (!licenseKey) {
+        showError('Please enter a license key');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/v1/subscription/validate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ license_key: licenseKey })
+        });
+
+        const data = await response.json();
+
+        if (data.valid && data.tier === 'pro') {
+          // Save to Chrome extension storage
+          if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.sync.set({ scamshield_license: licenseKey }, () => {
+              showSuccess('✅ License activated! Your extension is now Pro. You can close this page.');
+            });
+          } else {
+            showSuccess('✅ License is valid! Copy this key to your extension settings.');
+          }
+        } else {
+          showError('Invalid or expired license key');
+        }
+      } catch (error) {
+        showError('Validation failed. Please check your connection and try again.');
+      }
+    }
+
+    function showSuccess(message) {
+      const el = document.getElementById('successMessage');
+      el.textContent = message;
+      el.style.display = 'block';
+    }
+
+    function showError(message) {
+      const el = document.getElementById('errorMessage');
+      el.textContent = message;
+      el.style.display = 'block';
+    }
+
+    function hideMessages() {
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('errorMessage').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

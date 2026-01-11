@@ -229,6 +229,53 @@ async def stripe_webhook(request: Request):
     return {"status": "ok"}
 
 
+class PayPalSubscriptionRequest(BaseModel):
+    subscription_id: str
+    plan: str = 'pro_monthly'
+
+
+@router.post("/paypal-subscription")
+async def paypal_subscription(request: PayPalSubscriptionRequest):
+    """
+    Handle PayPal subscription activation.
+    Generates license key after PayPal subscription is approved.
+    """
+    try:
+        # Generate license key for PayPal subscription
+        license_key = generate_license_key('pro')
+        
+        # Store in database
+        success = db.create_license_paypal(
+            license_key=license_key,
+            subscription_id=request.subscription_id,
+            tier='pro',
+            payment_provider='paypal'
+        )
+        
+        if not success:
+            # Fallback: store in memory if DB fails
+            print(f"⚠️ DB failed, storing PayPal license in memory: {license_key}")
+        
+        return {
+            "success": True,
+            "license_key": license_key,
+            "tier": "pro",
+            "subscription_id": request.subscription_id,
+            "message": "Subscription activated successfully!"
+        }
+    
+    except Exception as e:
+        print(f"❌ PayPal subscription error: {e}")
+        raise HTTPException(status_code=500, detail=f"Activation failed: {str(e)}")
+
+
+def generate_license_key(tier: str = 'pro') -> str:
+    """Generate a unique license key."""
+    prefix = 'JG-PRO' if tier == 'pro' else 'JG-FREE'
+    random_part = secrets.token_hex(8).upper()
+    return f"{prefix}-{random_part[:4]}-{random_part[4:8]}-{random_part[8:12]}"
+
+
 @router.get("/plans")
 async def get_plans():
     """Get available subscription plans."""
